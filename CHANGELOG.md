@@ -7,6 +7,20 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [0.3.0] — 2026-06-10
+
+### Added
+- PIM service (`app/services/pim.py`) — loads and normalises eligible, active, and pending role assignments; relative and absolute expiry formatting; per-tenant+subscription cache
+- Status chip component (`app/components/status_chip.py`) — colour-coded pills for Active / Eligible / PendingApproval / Provisioning / Denied / Failed
+- Full Access tab (`app/views/access_view.py`):
+  - Subscription dropdown with auto-select of first enabled subscription
+  - Tabular role list: Status chip, Role, Resource, Via, Expires (relative + absolute)
+  - Left filter rail: Active / Eligible / Pending checkboxes with live counts, Hide duplicates
+  - Bottom action bar: Justification field, Duration dropdown (1–8h), selected count, "Select eligible", Activate button
+  - Per-row "Activate" quick-action button for eligible roles
+  - Full activation flow with in-row Provisioning status and background polling every 10s
+  - Pubsub subscription for shell-level refresh signals
+
 ## [0.2.0] — 2026-06-10
 
 ### Added
