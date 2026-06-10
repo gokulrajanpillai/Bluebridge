@@ -43,7 +43,14 @@ python main.py
 
 ```bash
 pip install -e ".[dev]"
-ruff check .
+
+invoke run              # run in dev mode
+invoke build            # build for the current OS
+invoke build --target windows   # or macos / linux
+invoke lint             # ruff check
+invoke fmt              # ruff format
+invoke clean            # remove build artefacts
+invoke --list           # see all tasks
 ```
 
 ## Architecture
