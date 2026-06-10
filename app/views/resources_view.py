@@ -274,8 +274,14 @@ def build(page: ft.Page) -> ft.Control:
         await asyncio.sleep(0.3)
         _build_tree()
 
-    # ── Keyboard shortcut Ctrl+F ──────────────────────────────────────────────
+    # ── Keyboard shortcut Ctrl+F ─────────────────────────────────────────────
+    # Registered on the page; shell also registers Ctrl+R — both coexist since
+    # we append to a list rather than replacing the handler.
+    _prev_keyboard = page.on_keyboard_event
+
     def _on_keyboard(e: ft.KeyboardEvent) -> None:
+        if _prev_keyboard:
+            _prev_keyboard(e)
         if e.ctrl and e.key == "F":
             if search_ref.current:
                 search_ref.current.focus()

@@ -7,6 +7,17 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [0.5.0] — 2026-06-10
+
+### Added
+- Settings persistence (`app/settings.py`) — stores dark mode, last tenant, last subscription per tenant, refresh interval in platform-appropriate config dir (`%APPDATA%/BlueBridge/settings.json` on Windows)
+- Auto-refresh loop in `main.py` — fires `page.pubsub.send_all("refresh")` on configurable interval (default 60 min), triggering background reload in both tabs
+- Structured file logging — writes to `%APPDATA%/BlueBridge/bluebridge.log` alongside stdout
+- Global page error handler — surfaces unhandled exceptions as error toasts instead of silent crashes
+- Settings persist on window close and on sign-out / tenant switch
+- Theme preference saved immediately on toggle
+- Keyboard handler chain in Resources tab — Ctrl+F focuses search without clobbering shell's Ctrl+R
+
 ## [0.4.0] — 2026-06-10
 
 ### Added
