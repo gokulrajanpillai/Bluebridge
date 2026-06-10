@@ -27,8 +27,14 @@ def _platform() -> str:
 
 @task
 def run(c):
-    """Start BlueBridge in development mode."""
+    """Start BlueBridge in desktop mode (requires a display)."""
     c.run("python main.py", pty=sys.platform != "win32")
+
+
+@task
+def web(c, port=8550):
+    """Start BlueBridge in web mode — use this inside devcontainers or CI."""
+    c.run(f"flet run main.py --web --port {port}", pty=sys.platform != "win32")
 
 
 @task
