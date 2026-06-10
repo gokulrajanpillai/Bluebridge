@@ -7,6 +7,10 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Added
+- `tasks.py` — invoke-based task runner: `run`, `build`, `build-all`, `lint`, `fmt`, `clean`, `install`
+- `invoke` added to `[dev]` extras in `pyproject.toml`
+
 ## [0.6.0] — 2026-06-10
 
 ### Added
