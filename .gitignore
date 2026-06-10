@@ -1,3 +1,6 @@
+# Always track the GitHub Actions directory regardless of global gitignore rules
+!.github/
+
 # Python
 __pycache__/
 *.py[cod]
