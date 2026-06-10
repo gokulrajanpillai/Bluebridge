@@ -7,6 +7,16 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [0.2.0] — 2026-06-10
+
+### Added
+- ARM REST client (`app/services/arm.py`) — async httpx client with pagination, token injection, subscriptions, resource groups, resources, PIM eligible/active/pending/activate endpoints
+- Full app shell (`app/views/shell.py`) — top app bar with identity presence dot, tenant switcher dropdown, last-updated timestamp, refresh, theme toggle, sign-out; `ft.Tabs` for Access/Resources; slim progress bar for background activity; status bar with subscription count + active tenant
+- Tenant switching — re-login via browser SSO if no cached credential, invalidates per-tenant token and data caches, reloads subscriptions
+- Ctrl+R keyboard shortcut for refresh
+- Tenant picker component (`app/components/tenant_picker.py`)
+- Access and Resources tab placeholder views
+
 ## [0.1.0] — 2026-06-10
 
 ### Added
