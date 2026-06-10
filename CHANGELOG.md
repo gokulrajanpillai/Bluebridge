@@ -7,6 +7,19 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [0.4.0] — 2026-06-10
+
+### Added
+- Tree node component (`app/components/tree_node.py`) — lazy-expanding nodes with resource-type icons, match highlighting, depth-based indentation, and portal open action
+- Full Resources tab (`app/views/resources_view.py`):
+  - Independent subscription picker
+  - Hierarchical tree: subscription → resource group → resource type → resource
+  - Debounced search with auto-expand of matching branches and text highlighting
+  - Side filter panel: resource type multi-select, location multi-select (up to 30 per category)
+  - Azure Portal deep-link on each resource node (`https://portal.azure.com/#@{tenant}/resource{id}`)
+  - Per-tenant+subscription in-memory cache; Ctrl+F to focus search
+  - Pubsub subscription for shell-level refresh signals
+
 ## [0.3.0] — 2026-06-10
 
 ### Added
