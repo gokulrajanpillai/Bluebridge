@@ -81,5 +81,18 @@ def clean(c):
 
 @task
 def install(c):
-    """Install dependencies (including dev extras)."""
+    """Install dependencies (including dev extras) and pre-commit hooks."""
     c.run('pip install -e ".[dev]"')
+    c.run("pre-commit install --install-hooks")
+
+
+@task
+def hooks(c):
+    """Run all pre-commit hooks against every file."""
+    c.run("pre-commit run --all-files")
+
+
+@task
+def hooks_update(c):
+    """Bump all pre-commit hook revisions to latest."""
+    c.run("pre-commit autoupdate")
