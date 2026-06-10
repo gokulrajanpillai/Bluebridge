@@ -37,6 +37,7 @@ class AppState:
     # ── UI ─────────────────────────────────────────────────────────────────────
     dark_mode: bool = True
     last_refreshed: str | None = None     # HH:MM:SS string
+    _refresh_interval_minutes: int = 60
 
     # ── Background task handles (to cancel on sign-out / tenant switch) ────────
     _bg_tasks: list[asyncio.Task] = field(default_factory=list)

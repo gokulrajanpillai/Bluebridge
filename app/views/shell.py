@@ -48,13 +48,14 @@ def build(page: ft.Page, on_sign_out: Callable[[], None]) -> ft.View:
 
     # ── Tenant switching ──────────────────────────────────────────────────────
     async def _do_switch_tenant(tenant_id: str) -> None:
+        from app import settings as app_settings
         _set_progress(True)
         try:
             await auth.switch_tenant(tenant_id)
-            # Rebuild the tenant dropdown options in case list changed
             tenant_dd_ref.current.options = _make_tenant_options()
             tenant_dd_ref.current.value = state.active_tenant_id
             _update_last_refreshed()
+            app_settings.persist_from_state()
             show_toast(page, f"Switched to {state.active_tenant_name}", "success")
         except Exception as exc:
             log.exception("Tenant switch failed")
@@ -84,6 +85,7 @@ def build(page: ft.Page, on_sign_out: Callable[[], None]) -> ft.View:
 
     # ── Theme toggle ──────────────────────────────────────────────────────────
     def _toggle_theme(_: ft.ControlEvent) -> None:
+        from app import settings as app_settings
         state.dark_mode = not state.dark_mode
         if state.dark_mode:
             page.theme_mode = ft.ThemeMode.DARK
@@ -91,6 +93,7 @@ def build(page: ft.Page, on_sign_out: Callable[[], None]) -> ft.View:
         else:
             page.theme_mode = ft.ThemeMode.LIGHT
             theme_icon_ref.current.icon = ft.Icons.DARK_MODE_OUTLINED
+        app_settings.persist_from_state()
         page.update()
 
     # ── Refresh ───────────────────────────────────────────────────────────────
