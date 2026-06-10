@@ -11,6 +11,7 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - `tasks.py` — invoke-based task runner: `run`, `web`, `build`, `build-all`, `lint`, `fmt`, `clean`, `install`
 - `invoke` added to `[dev]` extras in `pyproject.toml`
 - `.devcontainer/` — VS Code devcontainer with Python 3.12, Azure CLI, ruff/pylance extensions, port 8550 forwarded for `invoke web`, and host `~/.azure` credential cache mounted so you stay logged in
+- `.github/workflows/release.yml` — on push of a `v*` tag: builds Windows/macOS/Linux executables in parallel via `flet build`, zips/tars platform artefacts, extracts the matching CHANGELOG entry, and publishes a GitHub Release with all three binaries attached
 
 ## [0.6.0] — 2026-06-10
 
