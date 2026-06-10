@@ -12,6 +12,10 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - `invoke` added to `[dev]` extras in `pyproject.toml`
 - `.devcontainer/` — VS Code devcontainer with Python 3.12, Azure CLI, ruff/pylance extensions, port 8550 forwarded for `invoke web`, and host `~/.azure` credential cache mounted so you stay logged in
 - `.github/workflows/release.yml` — on push of a `v*` tag: builds Windows/macOS/Linux executables in parallel via `flet build`, zips/tars platform artefacts, extracts the matching CHANGELOG entry, and publishes a GitHub Release with all three binaries attached
+- `.github/workflows/ci.yml` — runs pre-commit on every push and pull request
+- `.pre-commit-config.yaml` — pre-commit hooks: file hygiene (`pre-commit-hooks`), secret scanning (`gitleaks`), lint + format (`ruff`), type checking (`mypy`), security SAST (`bandit`), advanced SAST (`semgrep` with python/secrets/bandit rulesets), conventional commit messages (`commitizen`)
+- `pyproject.toml` — ruff rule set expanded (bugbear, comprehensions, simplify, security, annotations), mypy and bandit config sections added; `pre-commit`, `mypy`, `bandit[toml]`, `semgrep` added to dev extras
+- `tasks.py` — `invoke install` now installs pre-commit hooks automatically; added `invoke hooks` and `invoke hooks-update`
 
 ## [0.6.0] — 2026-06-10
 
