@@ -1,0 +1,56 @@
+{
+  "name": "BlueBridge",
+  "build": {
+    "dockerfile": "Dockerfile",
+    "context": ".."
+  },
+  "workspaceFolder": "/workspace",
+  "workspaceMount": "source=${localWorkspaceFolder},target=/workspace,type=bind,consistency=cached",
+
+  // ── Forwarded ports ────────────────────────────────────────────────────────
+  // 8550 = flet web mode  (invoke web)
+  "forwardPorts": [8550],
+  "portsAttributes": {
+    "8550": {
+      "label": "BlueBridge (web dev mode)",
+      "onAutoForward": "openBrowser"
+    }
+  },
+
+  // ── VS Code extensions ─────────────────────────────────────────────────────
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "ms-python.python",
+        "ms-python.vscode-pylance",
+        "charliermarsh.ruff",
+        "ms-azure-devops.azure-pipelines",
+        "ms-vscode.azure-account"
+      ],
+      "settings": {
+        "python.defaultInterpreterPath": "/home/vscode/.local/bin/python",
+        "editor.formatOnSave": true,
+        "[python]": {
+          "editor.defaultFormatter": "charliermarsh.ruff",
+          "editor.codeActionsOnSave": {
+            "source.fixAll.ruff": "explicit",
+            "source.organizeImports.ruff": "explicit"
+          }
+        },
+        "ruff.lint.args": ["--config=/workspace/pyproject.toml"]
+      }
+    }
+  },
+
+  // ── Lifecycle hooks ────────────────────────────────────────────────────────
+  "postCreateCommand": "pip install --user -e '.[dev]'",
+  "postStartCommand": "az --version && python --version",
+
+  // ── Run as non-root user ───────────────────────────────────────────────────
+  "remoteUser": "vscode",
+
+  // ── Mount az CLI credential cache from host so you stay logged in ─────────
+  "mounts": [
+    "source=${localEnv:HOME}${localEnv:USERPROFILE}/.azure,target=/home/vscode/.azure,type=bind,consistency=cached"
+  ]
+}

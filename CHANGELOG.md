@@ -8,8 +8,9 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## [Unreleased]
 
 ### Added
-- `tasks.py` — invoke-based task runner: `run`, `build`, `build-all`, `lint`, `fmt`, `clean`, `install`
+- `tasks.py` — invoke-based task runner: `run`, `web`, `build`, `build-all`, `lint`, `fmt`, `clean`, `install`
 - `invoke` added to `[dev]` extras in `pyproject.toml`
+- `.devcontainer/` — VS Code devcontainer with Python 3.12, Azure CLI, ruff/pylance extensions, port 8550 forwarded for `invoke web`, and host `~/.azure` credential cache mounted so you stay logged in
 
 ## [0.6.0] — 2026-06-10
 
