@@ -7,6 +7,14 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [0.6.0] — 2026-06-10
+
+### Added
+- `build.py` — helper script wrapping `flet build` for Windows / macOS / Linux with project metadata
+- `assets/` directory with README explaining font and icon placement
+- `pyproject.toml` version bumped to 0.5.0, added `[tool.flet]` metadata block and `bluebridge` entry-point script
+- `.gitignore` already excludes `build/` output
+
 ## [0.5.0] — 2026-06-10
 
 ### Added
