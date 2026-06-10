@@ -1,0 +1,158 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  # ── Build jobs (run in parallel) ────────────────────────────────────────────
+
+  build-windows:
+    name: Build / Windows
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: "3.27.x"
+          channel: stable
+          cache: true
+
+      - name: Install dependencies
+        run: pip install -e ".[dev]"
+
+      - name: Build
+        run: python build.py windows
+
+      - name: Upload artefact
+        uses: actions/upload-artifact@v4
+        with:
+          name: bluebridge-windows
+          path: build/windows/**
+          if-no-files-found: error
+
+  build-macos:
+    name: Build / macOS
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: "3.27.x"
+          channel: stable
+          cache: true
+
+      - name: Install dependencies
+        run: pip install -e ".[dev]"
+
+      - name: Build
+        run: python build.py macos
+
+      - name: Zip app bundle
+        run: |
+          cd build/macos
+          zip -r ../../bluebridge-macos.zip .
+
+      - name: Upload artefact
+        uses: actions/upload-artifact@v4
+        with:
+          name: bluebridge-macos
+          path: bluebridge-macos.zip
+          if-no-files-found: error
+
+  build-linux:
+    name: Build / Linux
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: "3.27.x"
+          channel: stable
+          cache: true
+
+      - name: Install Linux build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            clang cmake ninja-build pkg-config \
+            libgtk-3-dev liblzma-dev libstdc++-12-dev
+
+      - name: Install dependencies
+        run: pip install -e ".[dev]"
+
+      - name: Build
+        run: python build.py linux
+
+      - name: Tar artefact
+        run: |
+          cd build/linux
+          tar -czf ../../bluebridge-linux.tar.gz .
+
+      - name: Upload artefact
+        uses: actions/upload-artifact@v4
+        with:
+          name: bluebridge-linux
+          path: bluebridge-linux.tar.gz
+          if-no-files-found: error
+
+  # ── Release job (runs after all builds succeed) ─────────────────────────────
+
+  release:
+    name: Publish Release
+    needs: [build-windows, build-macos, build-linux]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download all artefacts
+        uses: actions/download-artifact@v4
+        with:
+          path: dist/
+
+      - name: Extract version from tag
+        id: version
+        run: echo "VERSION=${GITHUB_REF_NAME}" >> "$GITHUB_OUTPUT"
+
+      - name: Extract changelog entry
+        id: changelog
+        run: |
+          VERSION="${{ steps.version.outputs.VERSION }}"
+          # Strip leading 'v' to match changelog headings like [0.5.0]
+          SEMVER="${VERSION#v}"
+          # Pull the block between this version heading and the next
+          NOTES=$(awk "/^## \[${SEMVER}\]/{found=1; next} found && /^## \[/{exit} found{print}" CHANGELOG.md)
+          # Write to a file to avoid shell escaping issues
+          echo "$NOTES" > release_notes.md
+          echo "Release notes extracted for ${SEMVER}"
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: "BlueBridge ${{ steps.version.outputs.VERSION }}"
+          body_path: release_notes.md
+          draft: false
+          prerelease: ${{ contains(github.ref_name, '-') }}
+          files: |
+            dist/bluebridge-windows/**
+            dist/bluebridge-macos/bluebridge-macos.zip
+            dist/bluebridge-linux/bluebridge-linux.tar.gz
