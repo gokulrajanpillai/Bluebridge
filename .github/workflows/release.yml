@@ -10,6 +10,7 @@ permissions:
 
 jobs:
   # ── Build jobs (run in parallel) ────────────────────────────────────────────
+  # flet 0.80+ manages its own Flutter installation — no flutter-action needed.
 
   build-windows:
     name: Build / Windows
@@ -20,12 +21,6 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-
-      - uses: subosito/flutter-action@v2
-        with:
-          flutter-version: "3.27.x"
-          channel: stable
-          cache: true
 
       - name: Install dependencies
         run: pip install -e ".[dev]"
@@ -51,12 +46,6 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-
-      - uses: subosito/flutter-action@v2
-        with:
-          flutter-version: "3.27.x"
-          channel: stable
-          cache: true
 
       - name: Install dependencies
         run: pip install -e ".[dev]"
@@ -85,12 +74,6 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-
-      - uses: subosito/flutter-action@v2
-        with:
-          flutter-version: "3.27.x"
-          channel: stable
-          cache: true
 
       - name: Install Linux build dependencies
         run: |

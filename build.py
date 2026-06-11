@@ -99,15 +99,8 @@ def _check_deps() -> None:
     except subprocess.CalledProcessError:
         print("flet is not installed. Run: pip install -e '.[dev]'")
         sys.exit(1)
-
-    # Verify flutter is on PATH — required by flet build.
-    if not shutil.which("flutter"):
-        print(
-            "flutter not found on PATH.\n"
-            "Inside the devcontainer: rebuild the container (Dockerfile now installs Flutter).\n"
-            "Outside: https://docs.flutter.dev/get-started/install"
-        )
-        sys.exit(1)
+    # flet 0.80+ downloads and manages its own Flutter on first `flet build` run —
+    # no separate Flutter installation is required.
 
 
 if __name__ == "__main__":
