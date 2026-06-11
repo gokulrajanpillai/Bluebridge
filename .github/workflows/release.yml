@@ -58,10 +58,12 @@ jobs:
       - name: Build
         run: python build.py macos
 
+      - name: Inspect build output
+        run: find build/macos -maxdepth 4 | head -60
+
       - name: Zip app bundle
         run: |
-          # Flutter puts the release .app under Build/Products/Release/
-          APP=$(find build/macos/Build/Products/Release -maxdepth 1 -name "*.app" | head -1)
+          APP=$(find build/macos -maxdepth 5 -name "*.app" | head -1)
           echo "Zipping: $APP"
           zip -r bluebridge-macos.zip "$APP"
 
