@@ -40,6 +40,7 @@ def main() -> None:
     cmd = _flet_cmd() + [
         "build",
         target,
+        "--verbose",
         "--project",
         "BlueBridge",
         "--description",
