@@ -15,17 +15,29 @@ Usage:
 from __future__ import annotations
 
 import os
+import shutil
 import subprocess
 import sys
+
+
+def _flet_cmd() -> list[str]:
+    """Return the command list to invoke the flet CLI.
+
+    Prefer the standalone `flet` executable on PATH (installed by pip).
+    Fall back to `python -m flet` so it works even when the Scripts/bin
+    directory is not on PATH (common on fresh CI runners on Windows).
+    """
+    if shutil.which("flet"):
+        return ["flet"]
+    return [sys.executable, "-m", "flet"]
 
 
 def main() -> None:
     target = sys.argv[1] if len(sys.argv) > 1 else _current_platform()
     _check_cross_compile(target)
-    _check_flutter()
+    _check_deps()
 
-    cmd = [
-        "flet",
+    cmd = _flet_cmd() + [
         "build",
         target,
         "--project",
@@ -75,18 +87,26 @@ def _check_cross_compile(target: str) -> None:
     sys.exit(1)
 
 
-def _check_flutter() -> None:
-    for cmd, hint in [
-        ("flet", "pip install -e '.[dev]'"),
-        (
-            "flutter",
-            "rebuild the devcontainer, or install Flutter from https://docs.flutter.dev/get-started/install",
-        ),
-    ]:
-        result = subprocess.run([cmd, "--version"], capture_output=True)
-        if result.returncode != 0:
-            print(f"'{cmd}' not found on PATH. Hint: {hint}")
-            sys.exit(1)
+def _check_deps() -> None:
+    # Verify flet is importable (covers both `flet` on PATH and python -m flet).
+    try:
+        subprocess.run(
+            [sys.executable, "-c", "import flet"],
+            check=True,
+            capture_output=True,
+        )
+    except subprocess.CalledProcessError:
+        print("flet is not installed. Run: pip install -e '.[dev]'")
+        sys.exit(1)
+
+    # Verify flutter is on PATH — required by flet build.
+    if not shutil.which("flutter"):
+        print(
+            "flutter not found on PATH.\n"
+            "Inside the devcontainer: rebuild the container (Dockerfile now installs Flutter).\n"
+            "Outside: https://docs.flutter.dev/get-started/install"
+        )
+        sys.exit(1)
 
 
 if __name__ == "__main__":
