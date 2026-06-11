@@ -30,11 +30,16 @@ jobs:
           PYTHONUTF8: "1"
         run: python build.py windows
 
+      - name: Zip artefact
+        shell: pwsh
+        run: |
+          Compress-Archive -Path build\windows\* -DestinationPath bluebridge-windows.zip
+
       - name: Upload artefact
         uses: actions/upload-artifact@v4
         with:
           name: bluebridge-windows
-          path: build/windows/**
+          path: bluebridge-windows.zip
           if-no-files-found: error
 
   build-macos:
@@ -138,6 +143,6 @@ jobs:
           draft: false
           prerelease: ${{ contains(github.ref_name, '-') }}
           files: |
-            dist/bluebridge-windows/**
+            dist/bluebridge-windows/bluebridge-windows.zip
             dist/bluebridge-macos/bluebridge-macos.zip
             dist/bluebridge-linux/bluebridge-linux.tar.gz
