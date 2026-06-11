@@ -50,7 +50,9 @@
   "remoteUser": "vscode",
 
   // ── Mount az CLI credential cache from host so you stay logged in ─────────
+  // ── Named volume for /home/vscode persists shell history across rebuilds ──
   "mounts": [
-    "source=${localEnv:HOME}${localEnv:USERPROFILE}/.azure,target=/home/vscode/.azure,type=bind,consistency=cached"
+    "source=${localEnv:HOME}${localEnv:USERPROFILE}/.azure,target=/home/vscode/.azure,type=bind,consistency=cached",
+    "source=bluebridge-home,target=/home/vscode,type=volume"
   ]
 }
