@@ -60,8 +60,10 @@ jobs:
 
       - name: Zip app bundle
         run: |
-          cd build/macos
-          zip -r ../../bluebridge-macos.zip .
+          # Flutter puts the release .app under Build/Products/Release/
+          APP=$(find build/macos/Build/Products/Release -maxdepth 1 -name "*.app" | head -1)
+          echo "Zipping: $APP"
+          zip -r bluebridge-macos.zip "$APP"
 
       - name: Upload artefact
         uses: actions/upload-artifact@v4
