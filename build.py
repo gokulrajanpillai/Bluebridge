@@ -25,8 +25,6 @@ def main() -> None:
     _check_flutter()
 
     cmd = [
-        sys.executable,
-        "-m",
         "flet",
         "build",
         target,
@@ -78,14 +76,17 @@ def _check_cross_compile(target: str) -> None:
 
 
 def _check_flutter() -> None:
-    result = subprocess.run(["flutter", "--version"], capture_output=True)
-    if result.returncode != 0:
-        print(
-            "Flutter not found on PATH.\n"
-            "Inside the devcontainer Flutter is at /opt/flutter/bin — rebuild the container.\n"
-            "Outside: https://docs.flutter.dev/get-started/install"
-        )
-        sys.exit(1)
+    for cmd, hint in [
+        ("flet", "pip install -e '.[dev]'"),
+        (
+            "flutter",
+            "rebuild the devcontainer, or install Flutter from https://docs.flutter.dev/get-started/install",
+        ),
+    ]:
+        result = subprocess.run([cmd, "--version"], capture_output=True)
+        if result.returncode != 0:
+            print(f"'{cmd}' not found on PATH. Hint: {hint}")
+            sys.exit(1)
 
 
 if __name__ == "__main__":
