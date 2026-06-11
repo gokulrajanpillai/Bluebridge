@@ -58,14 +58,12 @@ jobs:
       - name: Build
         run: python build.py macos
 
-      - name: Inspect build output
-        run: find build/macos -maxdepth 4 | head -60
-
       - name: Zip app bundle
         run: |
-          APP=$(find build/macos -maxdepth 5 -name "*.app" | head -1)
-          echo "Zipping: $APP"
-          zip -r bluebridge-macos.zip "$APP"
+          # ditto preserves symlinks (zip -r follows them, inflating to ~5GB via
+          # serious_python's .pod/dist_macos recursive symlink inside the bundle).
+          ditto -c -k --sequesterRsrc --keepParent \
+            build/macos/BlueBridge.app bluebridge-macos.zip
 
       - name: Upload artefact
         uses: actions/upload-artifact@v4
