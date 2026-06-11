@@ -40,7 +40,6 @@ def main() -> None:
     cmd = _flet_cmd() + [
         "build",
         target,
-        "--no-confirm",
         "--verbose",
         "--project",
         "BlueBridge",
@@ -60,7 +59,9 @@ def main() -> None:
         cmd += ["--icon", "assets/icons/icon.png"]
 
     print(f"Running: {' '.join(cmd)}")
-    result = subprocess.run(cmd)
+    # Pipe "y" to stdin so flet's interactive Flutter-install prompt is
+    # auto-accepted in non-TTY environments (CI, devcontainer first run).
+    result = subprocess.run(cmd, input="y\n", text=True)
     sys.exit(result.returncode)
 
 
