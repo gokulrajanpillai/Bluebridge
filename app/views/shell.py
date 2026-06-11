@@ -1,10 +1,12 @@
 """App shell — top bar, tenant switcher, tabs, status bar."""
+
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import logging
-from datetime import datetime, timezone
-from typing import Callable
+from collections.abc import Callable
+from datetime import UTC, datetime
 
 import flet as ft
 
@@ -34,7 +36,7 @@ def build(page: ft.Page, on_sign_out: Callable[[], None]) -> ft.View:
 
     # ── Helpers ───────────────────────────────────────────────────────────────
     def _now_str() -> str:
-        return datetime.now(timezone.utc).strftime("%H:%M:%S")
+        return datetime.now(UTC).strftime("%H:%M:%S")
 
     def _set_progress(visible: bool) -> None:
         progress_ref.current.visible = visible
@@ -49,6 +51,7 @@ def build(page: ft.Page, on_sign_out: Callable[[], None]) -> ft.View:
     # ── Tenant switching ──────────────────────────────────────────────────────
     async def _do_switch_tenant(tenant_id: str) -> None:
         from app import settings as app_settings
+
         _set_progress(True)
         try:
             await auth.switch_tenant(tenant_id)
@@ -76,16 +79,15 @@ def build(page: ft.Page, on_sign_out: Callable[[], None]) -> ft.View:
 
     # ── Sign out ──────────────────────────────────────────────────────────────
     async def _do_sign_out(_: ft.ControlEvent) -> None:
-        try:
+        with contextlib.suppress(Exception):
             await az_cli.logout()
-        except Exception:
-            pass
         state.clear_for_signout()
         on_sign_out()
 
     # ── Theme toggle ──────────────────────────────────────────────────────────
     def _toggle_theme(_: ft.ControlEvent) -> None:
         from app import settings as app_settings
+
         state.dark_mode = not state.dark_mode
         if state.dark_mode:
             page.theme_mode = ft.ThemeMode.DARK
@@ -259,7 +261,10 @@ def build(page: ft.Page, on_sign_out: Callable[[], None]) -> ft.View:
             [
                 ft.Text(
                     ref=status_bar_ref,
-                    value=f"{sub_count} subscription{'s' if sub_count != 1 else ''}  ·  {state.active_tenant_name or '—'}",
+                    value=(
+                        f"{sub_count} subscription{'s' if sub_count != 1 else ''}"
+                        f"  ·  {state.active_tenant_name or '—'}"
+                    ),
                     size=theme.SIZE_XS,
                     color=muted,
                 ),

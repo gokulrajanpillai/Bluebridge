@@ -1,14 +1,15 @@
 """Lazy-expanding tree node for the resources hierarchy."""
+
 from __future__ import annotations
 
-from typing import Callable
+from collections.abc import Callable
 
 import flet as ft
 
 from app import theme
 
 
-def _resource_type_icon(resource_type: str) -> ft.Icons:
+def _resource_type_icon(resource_type: str) -> ft.IconData:
     rt = resource_type.lower()
     if "storageaccount" in rt or "storage" in rt:
         return ft.Icons.STORAGE_OUTLINED
@@ -46,12 +47,12 @@ class TreeNode(ft.Column):
         icon: ft.Icons = ft.Icons.FOLDER_OUTLINED,
         icon_color: str = theme.ACCENT,
         count: int | None = None,
-        children_builder: Callable[[], list["TreeNode"]] | None = None,
+        children_builder: Callable[[], list[TreeNode]] | None = None,
         on_action: Callable[[], None] | None = None,
         depth: int = 0,
         highlight: str = "",
         is_dark: bool = True,
-    ):
+    ) -> None:
         super().__init__(spacing=0, tight=True)
         self._label = label
         self._icon = icon
@@ -67,8 +68,6 @@ class TreeNode(ft.Column):
 
         text_color = theme.DARK_TEXT if is_dark else theme.LIGHT_TEXT
         muted = theme.DARK_TEXT_MUTED if is_dark else theme.LIGHT_TEXT_MUTED
-        border = theme.DARK_BORDER if is_dark else theme.LIGHT_BORDER
-        surface = theme.DARK_SURFACE if is_dark else theme.LIGHT_SURFACE
 
         indent = self._depth * 16
 
@@ -140,7 +139,9 @@ class TreeNode(ft.Column):
             ),
             padding=ft.padding.symmetric(vertical=4, horizontal=theme.S2),
             border_radius=theme.RADIUS_SM,
-            on_click=_toggle if children_builder else (lambda _: on_action() if on_action else None),
+            on_click=_toggle
+            if children_builder
+            else (lambda _: on_action() if on_action else None),
         )
 
         children_col = ft.Column(controls=[], spacing=0, tight=True, visible=False)
@@ -156,8 +157,8 @@ class TreeNode(ft.Column):
         if idx == -1:
             return [ft.Text(label, size=theme.SIZE_TABLE, color=color)]
         pre = label[:idx]
-        match = label[idx: idx + len(self._highlight)]
-        post = label[idx + len(self._highlight):]
+        match = label[idx : idx + len(self._highlight)]
+        post = label[idx + len(self._highlight) :]
         spans = []
         if pre:
             spans.append(ft.Text(pre, size=theme.SIZE_TABLE, color=color))
