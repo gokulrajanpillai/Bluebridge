@@ -1,9 +1,11 @@
 """PIM data loading, normalisation, and caching."""
+
 from __future__ import annotations
 
 import asyncio
 import logging
-from datetime import datetime, timezone, timedelta
+from collections.abc import Callable
+from datetime import UTC, datetime
 from typing import Any
 
 from app.services import arm
@@ -21,7 +23,7 @@ def _parse_dt(s: str | None) -> datetime | None:
         "%Y-%m-%dT%H:%M:%S",
     ):
         try:
-            return datetime.strptime(s, fmt).replace(tzinfo=timezone.utc)
+            return datetime.strptime(s, fmt).replace(tzinfo=UTC)
         except ValueError:
             continue
     try:
@@ -34,7 +36,7 @@ def _fmt_relative(dt: datetime | None) -> str:
     """Return relative time string like 'in 475h 48m' or 'Expired'."""
     if dt is None:
         return "—"
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     delta = dt - now
     if delta.total_seconds() < 0:
         return "Expired"
@@ -79,7 +81,9 @@ def _normalise_eligible(raw: dict, subscriptions: list[dict]) -> dict:
         "name": raw.get("name", ""),
         "status": "Eligible",
         "role_definition_id": props.get("roleDefinitionId", ""),
-        "role_name": props.get("expandedProperties", {}).get("roleDefinition", {}).get("displayName", ""),
+        "role_name": props.get("expandedProperties", {})
+        .get("roleDefinition", {})
+        .get("displayName", ""),
         "scope": scope,
         "scope_display": _scope_display(scope, subscriptions),
         "scope_type": props.get("expandedProperties", {}).get("scope", {}).get("type", ""),
@@ -101,7 +105,9 @@ def _normalise_active(raw: dict, subscriptions: list[dict]) -> dict:
         "name": raw.get("name", ""),
         "status": "Active",
         "role_definition_id": props.get("roleDefinitionId", ""),
-        "role_name": props.get("expandedProperties", {}).get("roleDefinition", {}).get("displayName", ""),
+        "role_name": props.get("expandedProperties", {})
+        .get("roleDefinition", {})
+        .get("displayName", ""),
         "scope": scope,
         "scope_display": _scope_display(scope, subscriptions),
         "scope_type": props.get("expandedProperties", {}).get("scope", {}).get("type", ""),
@@ -164,6 +170,9 @@ async def load_pim_data(
     if not force and cache_key in state.pim_cache:
         return state.pim_cache[cache_key]
 
+    eligible_raw: Any
+    active_raw: Any
+    pending_raw: Any
     eligible_raw, active_raw, pending_raw = await asyncio.gather(
         arm.list_pim_eligible(subscription_id, tenant_id=tid or None),
         arm.list_pim_active(subscription_id, tenant_id=tid or None),
@@ -173,7 +182,7 @@ async def load_pim_data(
 
     subs = state.subscriptions
 
-    def _safe_list(result, normalise_fn) -> list:
+    def _safe_list(result: Any, normalise_fn: Callable[..., dict]) -> list[dict]:
         if isinstance(result, Exception):
             log.warning("PIM load error: %s", result)
             return []

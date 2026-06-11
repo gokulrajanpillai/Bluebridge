@@ -12,6 +12,7 @@ repos:
         args: [--unsafe]          # allow custom tags (GitHub Actions uses them)
       - id: check-toml
       - id: check-json
+        exclude: ^\.devcontainer/devcontainer\.json$
       - id: check-added-large-files
         args: [--maxkb=1024]
       - id: check-merge-conflict
@@ -50,22 +51,13 @@ repos:
     rev: 1.8.3
     hooks:
       - id: bandit
+        additional_dependencies: ["bandit[toml]"]
         args: [-c, pyproject.toml]
         # Exclude test fixtures and build artefacts
         exclude: ^(build|dist|\.venv)/
 
-  # ── Advanced SAST (semgrep) ───────────────────────────────────────────────
-  - repo: https://github.com/semgrep/semgrep
-    rev: v1.124.0
-    hooks:
-      - id: semgrep
-        args:
-          - --config=p/python
-          - --config=p/secrets
-          - --config=p/bandit
-          - --error
-          - --quiet
-        exclude: ^(build|dist|\.venv)/
+  # semgrep is run in CI only (see .github/workflows/ci.yml) — broken in
+  # pre-commit isolated envs on Python 3.12 due to missing pkg_resources.
 
   # ── Commit message format ─────────────────────────────────────────────────
   - repo: https://github.com/commitizen-tools/commitizen

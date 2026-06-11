@@ -1,9 +1,9 @@
 """Access tab — subscription picker + PIM role tables + activation bar."""
+
 from __future__ import annotations
 
 import asyncio
 import logging
-from typing import Any
 
 import flet as ft
 
@@ -37,9 +37,9 @@ def build(page: ft.Page) -> ft.Control:
     muted = theme.DARK_TEXT_MUTED if is_dark else theme.LIGHT_TEXT_MUTED
 
     # ── State (local to this view instance) ──────────────────────────────────
-    _selected: set[str] = set()          # set of role IDs
-    _all_rows: list[dict] = []           # full data set (unfiltered)
-    _filtered_rows: list[dict] = []      # after filter rail
+    _selected: set[str] = set()  # set of role IDs
+    _all_rows: list[dict] = []  # full data set (unfiltered)
+    _filtered_rows: list[dict] = []  # after filter rail
 
     # Filter rail checkboxes
     _show_active = {"v": True}
@@ -231,8 +231,12 @@ def build(page: ft.Page) -> ft.Control:
 
     def _update_filter_counts() -> None:
         active_count_ref.current.value = str(sum(1 for r in _all_rows if r["status"] == "Active"))
-        eligible_count_ref.current.value = str(sum(1 for r in _all_rows if r["status"] == "Eligible"))
-        pending_count_ref.current.value = str(sum(1 for r in _all_rows if r["status"] in ("PendingApproval", "Provisioning")))
+        eligible_count_ref.current.value = str(
+            sum(1 for r in _all_rows if r["status"] == "Eligible")
+        )
+        pending_count_ref.current.value = str(
+            sum(1 for r in _all_rows if r["status"] in ("PendingApproval", "Provisioning"))
+        )
         page.update()
 
     def _set_loading(v: bool) -> None:
@@ -249,7 +253,9 @@ def build(page: ft.Page) -> ft.Control:
         error_ref.current.content = ft.Column(
             [
                 ft.Icon(ft.Icons.ERROR_OUTLINE, color=theme.ERROR, size=32),
-                ft.Text(msg, color=theme.ERROR, size=theme.SIZE_BODY, text_align=ft.TextAlign.CENTER),
+                ft.Text(
+                    msg, color=theme.ERROR, size=theme.SIZE_BODY, text_align=ft.TextAlign.CENTER
+                ),
             ],
             horizontal_alignment=ft.CrossAxisAlignment.CENTER,
             spacing=theme.S2,
@@ -311,14 +317,11 @@ def build(page: ft.Page) -> ft.Control:
         _refresh_table()
 
         for row in rows_to_activate:
-            asyncio.ensure_future(
-                _submit_activation(row, sub_id, justification, duration)
-            )
+            asyncio.ensure_future(_submit_activation(row, sub_id, justification, duration))
 
-    async def _submit_activation(
-        row: dict, sub_id: str, justification: str, duration: int
-    ) -> None:
+    async def _submit_activation(row: dict, sub_id: str, justification: str, duration: int) -> None:
         import uuid
+
         req_name = str(uuid.uuid4())
         try:
             result = await arm.activate_role(
@@ -333,9 +336,7 @@ def build(page: ft.Page) -> ft.Control:
             )
             req_name = result.get("name", req_name)
             # Poll until terminal state
-            asyncio.ensure_future(
-                _poll_activation(row, sub_id, req_name)
-            )
+            asyncio.ensure_future(_poll_activation(row, sub_id, req_name))
         except Exception as exc:
             row["status"] = "Failed"
             row["expires_relative"] = "—"
@@ -369,14 +370,16 @@ def build(page: ft.Page) -> ft.Control:
                         reason = props.get("statusDetails", {}).get("statusReason", "")
                         show_toast(page, f"Denied: {reason or 'request denied'}", "error")
                     else:
-                        show_toast(page, f"Activation failed for {row.get('role_name', 'role')}", "error")
+                        show_toast(
+                            page, f"Activation failed for {row.get('role_name', 'role')}", "error"
+                        )
                     _refresh_table()
                     return
                 elif arm_status == "PendingApproval":
                     row["status"] = "PendingApproval"
                     _refresh_table()
             except Exception:
-                pass  # transient error — keep polling
+                log.debug("Poll error (transient)", exc_info=True)
 
     # ── Bulk select ───────────────────────────────────────────────────────────
     def _select_all(_: ft.ControlEvent) -> None:
@@ -539,7 +542,9 @@ def build(page: ft.Page) -> ft.Control:
                     tooltip="Reload PIM data",
                     on_click=lambda e: asyncio.ensure_future(
                         _load_pim(state.selected_subscription_access or "", force=True)
-                    ) if state.selected_subscription_access else None,
+                    )
+                    if state.selected_subscription_access
+                    else None,
                 ),
             ],
             spacing=theme.S3,

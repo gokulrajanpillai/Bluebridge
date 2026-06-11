@@ -1,7 +1,9 @@
 """Async subprocess wrapper around the az CLI."""
+
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import json
 import shutil
 import sys
@@ -10,7 +12,8 @@ from typing import Any
 
 class AzCliError(Exception):
     """Raised when az CLI exits with a non-zero code or produces unexpected output."""
-    def __init__(self, message: str, returncode: int = -1, stderr: str = ""):
+
+    def __init__(self, message: str, returncode: int = -1, stderr: str = "") -> None:
         super().__init__(message)
         self.returncode = returncode
         self.stderr = stderr
@@ -32,8 +35,7 @@ async def _run(
     az_bin = _find_az()
     if az_bin is None:
         raise AzNotInstalledError(
-            "Azure CLI (az) not found on PATH. "
-            "Install it from https://aka.ms/install-azure-cli"
+            "Azure CLI (az) not found on PATH. Install it from https://aka.ms/install-azure-cli"
         )
 
     cmd = [az_bin, *args, "--output", "json"]
@@ -48,17 +50,14 @@ async def _run(
         stdout_bytes, stderr_bytes = await asyncio.wait_for(
             proc.communicate(stdin_bytes), timeout=timeout
         )
-    except asyncio.TimeoutError:
-        try:
+    except TimeoutError:
+        with contextlib.suppress(Exception):
             proc.kill()
-        except Exception:
-            pass
-        raise AzCliError(f"az {' '.join(args)} timed out after {timeout}s")
+        raise AzCliError(f"az {' '.join(args)} timed out after {timeout}s") from None
     except FileNotFoundError:
         raise AzNotInstalledError(
-            "Azure CLI (az) not found on PATH. "
-            "Install it from https://aka.ms/install-azure-cli"
-        )
+            "Azure CLI (az) not found on PATH. Install it from https://aka.ms/install-azure-cli"
+        ) from None
 
     stdout = stdout_bytes.decode(errors="replace").strip()
     stderr = stderr_bytes.decode(errors="replace").strip()
@@ -66,7 +65,7 @@ async def _run(
     if proc.returncode != 0:
         # Surface the most useful part of the error message
         detail = _extract_error(stderr) or stderr or f"exit code {proc.returncode}"
-        raise AzCliError(detail, returncode=proc.returncode, stderr=stderr)
+        raise AzCliError(detail, returncode=proc.returncode or -1, stderr=stderr)
 
     return stdout, stderr
 
@@ -102,10 +101,11 @@ def _parse_json(raw: str) -> Any:
     try:
         return json.loads(raw)
     except json.JSONDecodeError as exc:
-        raise AzCliError(f"Failed to parse az output as JSON: {exc}\nOutput: {raw[:500]}")
+        raise AzCliError(f"Failed to parse az output as JSON: {exc}\nOutput: {raw[:500]}") from exc
 
 
 # ── Public API ────────────────────────────────────────────────────────────────
+
 
 async def check_az_installed() -> bool:
     """Return True if az CLI is available, False otherwise (no exception)."""
@@ -171,10 +171,8 @@ async def login(tenant_id: str | None = None) -> dict[str, Any]:
 
 async def logout() -> None:
     """Sign out the current credential."""
-    try:
+    with contextlib.suppress(AzCliError):
         await _run("logout", timeout=15.0)
-    except AzCliError:
-        pass  # logout failures are non-fatal
 
 
 async def get_access_token(

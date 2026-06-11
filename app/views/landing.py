@@ -1,12 +1,14 @@
 """Landing / sign-in page."""
+
 from __future__ import annotations
 
 import asyncio
+import contextlib
 
 import flet as ft
 
 from app import theme
-from app.services import az_cli, auth
+from app.services import auth, az_cli
 from app.state import state
 
 
@@ -18,7 +20,6 @@ def build(page: ft.Page, on_signed_in: callable) -> ft.View:
     status_ref = ft.Ref[ft.Text]()
     spinner_ref = ft.Ref[ft.ProgressRing]()
     error_ref = ft.Ref[ft.Container]()
-    install_link_ref = ft.Ref[ft.TextButton]()
 
     def _set_loading(loading: bool, message: str = "Complete sign-in in your browser…") -> None:
         btn_ref.current.disabled = loading
@@ -84,10 +85,8 @@ def build(page: ft.Page, on_signed_in: callable) -> ft.View:
             _set_error("Sign-in was cancelled.")
         finally:
             # If we navigated away, btn_ref might be gone — guard
-            try:
+            with contextlib.suppress(Exception):
                 _set_loading(False, "")
-            except Exception:
-                pass
 
     # ── Layout ────────────────────────────────────────────────────────────────
     is_dark = state.dark_mode
