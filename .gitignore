@@ -24,8 +24,12 @@ venv/
 ENV/
 env/
 
-# Flet build output
-build/
+# PyInstaller
+*.spec
+*.pkg
+
+# Release artefacts
+bluebridge-*.zip
 
 # Settings / secrets
 settings.json

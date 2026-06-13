@@ -1,108 +1,81 @@
-"""
-Helper script to build BlueBridge for the current platform using `flet build`.
-
-Cross-compilation is NOT supported by flet/Flutter — each target must be built
-on its native OS (Windows → MSIX, macOS → .app, Linux → AppImage/deb).
-The GitHub Actions release workflow handles all three in parallel.
+#!/usr/bin/env python3
+"""Cross-platform PyInstaller build script for BlueBridge.
 
 Usage:
-    python build.py                  # build for current platform
-    python build.py linux            # Linux AppImage / deb
-    python build.py windows          # must run on Windows
-    python build.py macos            # must run on macOS
+    python build.py [windows|macos|linux]
+
+Output:
+    build/<platform>/BlueBridge/          (all platforms)
+    build/macos/BlueBridge.app            (macOS .app bundle)
 """
 
 from __future__ import annotations
 
 import os
-import shutil
 import subprocess
 import sys
+import tomllib
+from pathlib import Path
 
 
-def _flet_cmd() -> list[str]:
-    """Return the command list to invoke the flet CLI.
+def _version() -> str:
+    return tomllib.loads(Path("pyproject.toml").read_text())["project"]["version"]
 
-    Prefer the standalone `flet` executable on PATH (installed by pip).
-    Fall back to `python -m flet` so it works even when the Scripts/bin
-    directory is not on PATH (common on fresh CI runners on Windows).
-    """
-    if shutil.which("flet"):
-        return ["flet"]
-    return [sys.executable, "-m", "flet"]
+
+def _run(*args: str) -> None:
+    print(f"  $ {' '.join(args)}")
+    subprocess.run(list(args), check=True)
 
 
 def main() -> None:
-    target = sys.argv[1] if len(sys.argv) > 1 else _current_platform()
-    _check_cross_compile(target)
-    _check_deps()
+    if len(sys.argv) < 2 or sys.argv[1].lower() not in ("windows", "macos", "linux"):
+        print("Usage: python build.py [windows|macos|linux]")
+        sys.exit(1)
 
-    cmd = _flet_cmd() + [
-        "build",
-        target,
-        "--verbose",
-        "--project",
-        "BlueBridge",
-        "--description",
-        "Azure Navigator — navigate Azure faster than the portal",
-        "--product",
-        "BlueBridge",
-        "--org",
-        "com.bluebridge",
-        "--build-version",
-        "0.5.0",
-        "--build-number",
-        "5",
+    platform = sys.argv[1].lower()
+    version = _version()
+    print(f"BlueBridge {version} — building for {platform}")
+
+    out_dir = Path("build") / platform
+    out_dir.mkdir(parents=True, exist_ok=True)
+
+    sep = os.pathsep  # ':' on Unix, ';' on Windows
+    pyinstaller = [sys.executable, "-m", "PyInstaller"]
+
+    cmd = [
+        *pyinstaller,
+        "launcher.py",
+        "--name", "BlueBridge",
+        "--onedir",
+        "--collect-all", "streamlit",
+        "--add-data", f"app.py{sep}.",
+        "--add-data", f"app{sep}app",
+        "--noconfirm",
+        "--clean",
+        "--distpath", str(out_dir),
     ]
 
-    if os.path.exists("assets/icons/icon.png"):
-        cmd += ["--icon", "assets/icons/icon.png"]
+    if platform == "macos":
+        cmd += [
+            "--windowed",
+            "--osx-bundle-identifier", "com.bluebridge.app",
+        ]
+    elif platform == "windows":
+        cmd += ["--windowed"]
+        icon = Path("assets/icons/icon.ico")
+        if icon.exists():
+            cmd += ["--icon", str(icon)]
+    # linux: no --windowed so the terminal stays visible
 
-    print(f"Running: {' '.join(cmd)}")
-    # Pipe "y" to stdin so flet's interactive Flutter-install prompt is
-    # auto-accepted in non-TTY environments (CI, devcontainer first run).
-    result = subprocess.run(cmd, input="y\n", text=True)
-    sys.exit(result.returncode)
+    _run(*cmd)
 
-
-def _current_platform() -> str:
-    if sys.platform == "win32":
-        return "windows"
-    if sys.platform == "darwin":
-        return "macos"
-    return "linux"
-
-
-def _check_cross_compile(target: str) -> None:
-    host = _current_platform()
-    if target == host:
-        return
-    print(
-        f"Cannot build '{target}' on '{host}': flet/Flutter does not support cross-compilation.\n"
-        "\n"
-        "  • Build linux   → run inside the devcontainer (Linux)\n"
-        "  • Build windows → run on Windows  (or push a tag to trigger GitHub Actions)\n"
-        "  • Build macos   → run on macOS    (or push a tag to trigger GitHub Actions)\n"
-        "\n"
-        "Push a version tag (e.g. git tag v1.0.0 && git push --tags) to build all\n"
-        "three platforms in parallel via GitHub Actions."
-    )
-    sys.exit(1)
-
-
-def _check_deps() -> None:
-    # Verify flet is importable (covers both `flet` on PATH and python -m flet).
-    try:
-        subprocess.run(
-            [sys.executable, "-c", "import flet"],
-            check=True,
-            capture_output=True,
-        )
-    except subprocess.CalledProcessError:
-        print("flet is not installed. Run: pip install -e '.[dev]'")
-        sys.exit(1)
-    # flet 0.80+ downloads and manages its own Flutter on first `flet build` run —
-    # no separate Flutter installation is required.
+    if platform == "macos":
+        bundle = out_dir / "BlueBridge.app"
+        print(f"\n✓ macOS app bundle: {bundle}")
+    else:
+        exe_name = "BlueBridge.exe" if platform == "windows" else "BlueBridge"
+        exe = out_dir / "BlueBridge" / exe_name
+        print(f"\n✓ Executable: {exe}")
 
 
 if __name__ == "__main__":

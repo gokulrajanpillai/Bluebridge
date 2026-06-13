@@ -1,17 +1,20 @@
-"""PIM data loading, normalisation, and caching."""
+"""PIM data loading, normalisation, and caching. Stateless — caller owns cache."""
 
 from __future__ import annotations
 
-import asyncio
 import logging
-from collections.abc import Callable
 from datetime import UTC, datetime
 from typing import Any
 
 from app.services import arm
-from app.state import state
 
 log = logging.getLogger(__name__)
+
+# Module-level cache: "{tenant_id}:{subscription_id}" → {eligible, active, pending}
+_pim_cache: dict[str, dict[str, list]] = {}
+
+# Module-level cache: "{tenant_id}:{subscription_id}:resources" → list[dict]
+_resources_cache: dict[str, list] = {}
 
 
 def _parse_dt(s: str | None) -> datetime | None:
@@ -33,7 +36,6 @@ def _parse_dt(s: str | None) -> datetime | None:
 
 
 def _fmt_relative(dt: datetime | None) -> str:
-    """Return relative time string like 'in 475h 48m' or 'Expired'."""
     if dt is None:
         return "—"
     now = datetime.now(UTC)
@@ -54,60 +56,32 @@ def _fmt_absolute(dt: datetime | None) -> str:
 
 
 def _scope_display(scope: str, subscriptions: list[dict]) -> str:
-    """Convert /subscriptions/.../resourceGroups/... to a friendly name."""
     parts = scope.strip("/").split("/")
-    # /subscriptions/{id}
     if len(parts) == 2 and parts[0] == "subscriptions":
         sub_id = parts[1]
         for s in subscriptions:
             if s.get("subscriptionId") == sub_id or s.get("id", "").endswith(sub_id):
                 return s.get("displayName") or s.get("name") or sub_id
         return sub_id
-    # /subscriptions/{id}/resourceGroups/{rg}
     if len(parts) >= 4 and parts[2] == "resourceGroups":
         return parts[3]
-    # /subscriptions/{id}/resourceGroups/{rg}/providers/...
     if len(parts) >= 6:
         return "/".join(parts[4:])
     return scope
 
 
-def _normalise_eligible(raw: dict, subscriptions: list[dict]) -> dict:
+def _normalise(raw: dict, status: str, subscriptions: list[dict]) -> dict:
     props = raw.get("properties", {})
     scope = props.get("scope", "")
     end_dt = _parse_dt(props.get("endDateTime"))
     return {
         "id": raw.get("id", ""),
         "name": raw.get("name", ""),
-        "status": "Eligible",
+        "status": status,
         "role_definition_id": props.get("roleDefinitionId", ""),
-        "role_name": props.get("expandedProperties", {})
-        .get("roleDefinition", {})
-        .get("displayName", ""),
-        "scope": scope,
-        "scope_display": _scope_display(scope, subscriptions),
-        "scope_type": props.get("expandedProperties", {}).get("scope", {}).get("type", ""),
-        "member_type": props.get("memberType", ""),
-        "principal_id": props.get("principalId", ""),
-        "end_dt": end_dt,
-        "expires_relative": _fmt_relative(end_dt),
-        "expires_absolute": _fmt_absolute(end_dt),
-        "_raw": raw,
-    }
-
-
-def _normalise_active(raw: dict, subscriptions: list[dict]) -> dict:
-    props = raw.get("properties", {})
-    scope = props.get("scope", "")
-    end_dt = _parse_dt(props.get("endDateTime"))
-    return {
-        "id": raw.get("id", ""),
-        "name": raw.get("name", ""),
-        "status": "Active",
-        "role_definition_id": props.get("roleDefinitionId", ""),
-        "role_name": props.get("expandedProperties", {})
-        .get("roleDefinition", {})
-        .get("displayName", ""),
+        "role_name": (
+            props.get("expandedProperties", {}).get("roleDefinition", {}).get("displayName", "")
+        ),
         "scope": scope,
         "scope_display": _scope_display(scope, subscriptions),
         "scope_type": props.get("expandedProperties", {}).get("scope", {}).get("type", ""),
@@ -123,8 +97,6 @@ def _normalise_active(raw: dict, subscriptions: list[dict]) -> dict:
 def _normalise_pending(raw: dict, subscriptions: list[dict]) -> dict:
     props = raw.get("properties", {})
     scope = props.get("scope", "")
-    req_status = props.get("status", "PendingApproval")
-    # Map ARM status strings to our display status
     status_map = {
         "PendingApproval": "PendingApproval",
         "Provisioning": "Provisioning",
@@ -134,7 +106,7 @@ def _normalise_pending(raw: dict, subscriptions: list[dict]) -> dict:
         "Canceled": "Failed",
         "Revoked": "Failed",
     }
-    status = status_map.get(req_status, req_status)
+    status = status_map.get(props.get("status", ""), props.get("status", "Pending"))
     return {
         "id": raw.get("id", ""),
         "name": raw.get("name", ""),
@@ -155,43 +127,92 @@ def _normalise_pending(raw: dict, subscriptions: list[dict]) -> dict:
     }
 
 
-async def load_pim_data(
+def load_pim_data(
     subscription_id: str,
-    tenant_id: str | None = None,
+    tenant_id: str,
+    subscriptions: list[dict],
     force: bool = False,
 ) -> dict[str, list]:
-    """
-    Load and cache PIM eligible, active, and pending assignments for a subscription.
-    Returns { "eligible": [...], "active": [...], "pending": [...] }.
-    """
-    tid = tenant_id or state.active_tenant_id or ""
-    cache_key = f"{tid}:{subscription_id}"
+    """Return {eligible, active, pending} for a subscription. Results are module-cached."""
+    cache_key = f"{tenant_id}:{subscription_id}"
+    if not force and cache_key in _pim_cache:
+        return _pim_cache[cache_key]
 
-    if not force and cache_key in state.pim_cache:
-        return state.pim_cache[cache_key]
-
-    eligible_raw: Any
-    active_raw: Any
-    pending_raw: Any
-    eligible_raw, active_raw, pending_raw = await asyncio.gather(
-        arm.list_pim_eligible(subscription_id, tenant_id=tid or None),
-        arm.list_pim_active(subscription_id, tenant_id=tid or None),
-        arm.list_pim_pending(subscription_id, tenant_id=tid or None),
-        return_exceptions=True,
-    )
-
-    subs = state.subscriptions
-
-    def _safe_list(result: Any, normalise_fn: Callable[..., dict]) -> list[dict]:
-        if isinstance(result, Exception):
-            log.warning("PIM load error: %s", result)
+    def _safe(fn: Any, *args: Any) -> list[dict]:
+        try:
+            return fn(*args)
+        except Exception as exc:
+            log.warning("PIM load error (%s): %s", fn.__name__, exc)
             return []
-        return [normalise_fn(r, subs) for r in result]
 
-    data = {
-        "eligible": _safe_list(eligible_raw, _normalise_eligible),
-        "active": _safe_list(active_raw, _normalise_active),
-        "pending": _safe_list(pending_raw, _normalise_pending),
+    eligible_raw = _safe(arm.list_pim_eligible, subscription_id, tenant_id)
+    active_raw = _safe(arm.list_pim_active, subscription_id, tenant_id)
+    pending_raw = _safe(arm.list_pim_pending, subscription_id, tenant_id)
+
+    data: dict[str, list] = {
+        "eligible": [_normalise(r, "Eligible", subscriptions) for r in eligible_raw],
+        "active": [_normalise(r, "Active", subscriptions) for r in active_raw],
+        "pending": [_normalise_pending(r, subscriptions) for r in pending_raw],
     }
-    state.pim_cache[cache_key] = data
+    _pim_cache[cache_key] = data
     return data
+
+
+def clear_cache(tenant_id: str = "") -> None:
+    """Evict cached PIM data for a tenant (or all if tenant_id is empty)."""
+    for key in list(_pim_cache):
+        if not tenant_id or key.startswith(f"{tenant_id}:"):
+            del _pim_cache[key]
+
+
+def load_resources(
+    subscription_id: str,
+    tenant_id: str,
+    force: bool = False,
+) -> list[dict]:
+    """Return normalised resource list for a subscription. Results are module-cached."""
+    cache_key = f"{tenant_id}:{subscription_id}:resources"
+    if not force and cache_key in _resources_cache:
+        return _resources_cache[cache_key]
+
+    try:
+        raw = arm.list_resources(subscription_id, tenant_id)
+    except Exception as exc:
+        log.warning("Resources load error for %s: %s", subscription_id, exc)
+        return []
+
+    resources: list[dict] = []
+    for r in raw:
+        rtype = r.get("type", "")
+        resource_id = r.get("id", "")
+        parts = resource_id.split("/")
+        rg = ""
+        for i, p in enumerate(parts):
+            if p.lower() == "resourcegroups" and i + 1 < len(parts):
+                rg = parts[i + 1]
+                break
+        resources.append({
+            "id": resource_id,
+            "name": r.get("name", ""),
+            "type": rtype,
+            "type_short": rtype.split("/")[-1] if "/" in rtype else rtype,
+            "provider": rtype.split("/")[0] if "/" in rtype else "",
+            "resource_group": rg,
+            "location": r.get("location", ""),
+            "tags": r.get("tags", {}),
+        })
+
+    _resources_cache[cache_key] = resources
+    return resources
+
+
+def clear_resources_cache(tenant_id: str = "", subscription_id: str = "") -> None:
+    """Evict cached resource data."""
+    for key in list(_resources_cache):
+        parts = key.split(":")
+        key_tenant = parts[0] if parts else ""
+        key_sub = parts[1] if len(parts) > 1 else ""
+        if (not tenant_id or key_tenant == tenant_id) and (
+            not subscription_id or key_sub == subscription_id
+        ):
+            del _resources_cache[key]

@@ -4,26 +4,24 @@ build-backend = "hatchling.build"
 
 [project]
 name = "bluebridge"
-version = "0.5.0"
-description = "Azure Navigator — navigate Azure faster than the portal"
+version = "0.7.0"
+description = "Azure PIM Access Manager"
 requires-python = ">=3.11"
 dependencies = [
-    "flet>=0.80.0",
+    "streamlit>=1.35.0",
     "httpx>=0.27.0",
 ]
 
 [project.optional-dependencies]
+build = [
+    "pyinstaller>=6.0",
+]
 dev = [
     "ruff",
-    "invoke",
-    "pre-commit",
     "mypy",
     "bandit[toml]",
-    "semgrep",
+    "pyinstaller>=6.0",
 ]
-
-[project.scripts]
-bluebridge = "main:run"
 
 [tool.hatch.build.targets.wheel]
 packages = ["app"]
@@ -44,39 +42,26 @@ select = [
     "C4",   # flake8-comprehensions
     "SIM",  # flake8-simplify
     "S",    # flake8-bandit (security)
-    "ANN",  # flake8-annotations (type hints)
 ]
 ignore = [
-    "ANN401",  # allow Any
-    "S603",    # subprocess calls — intentional (az CLI wrapper)
-    "S607",    # partial executable path — intentional
+    "S603",  # subprocess calls — intentional (az CLI wrapper)
+    "S607",  # partial executable path — intentional
 ]
 
 [tool.ruff.lint.per-file-ignores]
-"main.py" = ["ANN"]           # entry point — annotations not required
-"tasks.py" = ["ANN"]          # invoke task files don't need annotations
-"app/views/*.py" = ["ANN"]    # Flet UI code, annotations cause noise
-"app/components/*.py" = ["ANN"]  # Flet component code
+"app.py" = ["ANN", "S101"]
+"launcher.py" = ["ANN"]
+"build.py" = ["ANN", "S603", "S607"]
 
 # ── Mypy ──────────────────────────────────────────────────────────────────────
 [tool.mypy]
 python_version = "3.11"
 strict = false
 warn_unused_ignores = true
-warn_return_any = false          # JSON-heavy services legitimately return Any
+warn_return_any = false
 warn_unused_configs = true
-ignore_missing_imports = true   # flet stubs not yet published
-pretty = true
-
-[[tool.mypy.overrides]]
-module = ["flet.*", "httpx.*"]
 ignore_missing_imports = true
-
-# Flet UI code: stubs are incomplete, Ref[X].current is X|None everywhere,
-# padding/border/alignment attrs are untyped — suppress rather than pollute.
-[[tool.mypy.overrides]]
-module = ["app.views.*", "app.components.*", "app.theme"]
-ignore_errors = true
+pretty = true
 
 # ── Bandit ────────────────────────────────────────────────────────────────────
 [tool.bandit]
@@ -87,10 +72,3 @@ skips = [
     "B607",  # partial executable path — intentional
     "B110",  # try/except/pass — intentional in legitimate places
 ]
-
-# ── flet build metadata ──────────────────────────────────────────────────────
-[tool.flet]
-app_name = "BlueBridge"
-org = "com.bluebridge"
-product = "BlueBridge"
-description = "Azure Navigator — navigate Azure faster than the portal"
