@@ -7,6 +7,32 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [0.7.0] — 2026-06-13
+
+### Added
+- Full rewrite of frontend from Flet to Streamlit — zero native-framework dependency
+- Cross-platform PyInstaller packaging via `build.py [windows|macos|linux]`
+- `launcher.py` auto-opens the system browser 3 s after server binds
+- Updated GitHub Actions: CI runs `ruff check`; Release builds all three platforms in parallel via PyInstaller and publishes a GitHub Release
+- **Resources tab** — lists all accessible resources with name, type, resource group, location and a direct Azure Portal deep-link per resource; searchable and filterable by RG, type and location
+- **Resource detail panel** — click ▶ on any resource to open an inline detail view
+  - Activity Log tab (auto-refreshes every 30 s) with 24 h history and plain-text export
+  - Storage tab for `Microsoft.Storage/storageAccounts` — list containers, browse virtual directories, preview blob metadata, one-click download
+  - Registry tab for `Microsoft.ContainerRegistry/registries` — list repos, list tags, copy `docker pull` command per image
+  - Container Logs tab for `Microsoft.ContainerInstance/containerGroups` — fetch stdout/stderr with configurable tail, plain-text export
+  - Deployments tab for `Microsoft.Web/sites` — deployment history with status icons
+  - Permission-denied errors surface actionable role hints (e.g. "Storage Blob Data Reader required") rather than raw HTTP 403s
+- **Bulk PIM activation** — checkbox-select multiple eligible roles, shared justification + duration, parallel activation via `ThreadPoolExecutor`; live per-role status via `st.status`
+- **Active tab** auto-refreshes every 60 s using `st.fragment`
+- **Pending tab** auto-refreshes every 30 s using `st.fragment`
+
+### Changed
+- `build.py` replaces the old Flet-based build script; uses `os.pathsep` for cross-platform `--add-data`
+- `launcher.py` opens the browser automatically — no more manual URL copy
+
+### Removed
+- All Flet UI code (`app/views/`, `app/components/`, `app/theme.py`, `app/state.py`, `app/settings.py`, `main.py`, `tasks.py`, `.devcontainer/`)
+
 ### Added
 - `tasks.py` — invoke-based task runner: `run`, `web`, `build`, `build-all`, `lint`, `fmt`, `clean`, `install`
 - `invoke` added to `[dev]` extras in `pyproject.toml`

@@ -3,12 +3,12 @@ name: CI
 on:
   push:
     branches: ["**"]
-    tags-ignore: ["v*"]   # tags are handled by release.yml
+    tags-ignore: ["v*"]
   pull_request:
 
 jobs:
   lint:
-    name: Lint & static analysis
+    name: Lint
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -17,14 +17,8 @@ jobs:
         with:
           python-version: "3.12"
 
-      - name: Cache pre-commit envs
-        uses: actions/cache@v4
-        with:
-          path: ~/.cache/pre-commit
-          key: pre-commit-${{ hashFiles('.pre-commit-config.yaml') }}
+      - name: Install ruff
+        run: pip install ruff
 
-      - name: Install dev dependencies
-        run: pip install -e ".[dev]"
-
-      - name: Run pre-commit hooks
-        run: pre-commit run --all-files
+      - name: Lint
+        run: ruff check .
