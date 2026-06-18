@@ -22,7 +22,7 @@ jobs:
           python-version: "3.12"
 
       - name: Install dependencies
-        run: pip install streamlit httpx pyinstaller
+        run: pip install -e ".[build]"
 
       - name: Build
         env:
@@ -51,7 +51,7 @@ jobs:
           python-version: "3.12"
 
       - name: Install dependencies
-        run: pip install streamlit httpx pyinstaller
+        run: pip install -e ".[build]"
 
       - name: Build
         run: python build.py macos
@@ -81,7 +81,7 @@ jobs:
           python-version: "3.12"
 
       - name: Install dependencies
-        run: pip install streamlit httpx pyinstaller
+        run: pip install -e ".[build]"
 
       - name: Build
         run: python build.py linux
