@@ -7,6 +7,15 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [0.7.1] — 2026-06-18
+
+### Fixed
+- Removed duplicate `streamlit>=1.35.0` dependency entry in `pyproject.toml` introduced during merge
+
+### Changed
+- `README.md` rewritten to reflect the Streamlit-based architecture, PyInstaller packaging, and the full feature set introduced in 0.7.0 (resource detail panel, bulk PIM activation, activity log, storage/registry/container/deployment tabs)
+- Removed stale Flet-era content from `[Unreleased]` section of changelog
+
 ## [0.7.0] — 2026-06-13
 
 ### Added
@@ -32,16 +41,6 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Removed
 - All Flet UI code (`app/views/`, `app/components/`, `app/theme.py`, `app/state.py`, `app/settings.py`, `main.py`, `tasks.py`, `.devcontainer/`)
-
-### Added
-- `tasks.py` — invoke-based task runner: `run`, `web`, `build`, `build-all`, `lint`, `fmt`, `clean`, `install`
-- `invoke` added to `[dev]` extras in `pyproject.toml`
-- `.devcontainer/` — VS Code devcontainer with Python 3.12, Azure CLI, ruff/pylance extensions, port 8550 forwarded for `invoke web`, and host `~/.azure` credential cache mounted so you stay logged in
-- `.github/workflows/release.yml` — on push of a `v*` tag: builds Windows/macOS/Linux executables in parallel via `flet build`, zips/tars platform artefacts, extracts the matching CHANGELOG entry, and publishes a GitHub Release with all three binaries attached
-- `.github/workflows/ci.yml` — runs pre-commit on every push and pull request
-- `.pre-commit-config.yaml` — pre-commit hooks: file hygiene (`pre-commit-hooks`), secret scanning (`gitleaks`), lint + format (`ruff`), type checking (`mypy`), security SAST (`bandit`), advanced SAST (`semgrep` with python/secrets/bandit rulesets), conventional commit messages (`commitizen`)
-- `pyproject.toml` — ruff rule set expanded (bugbear, comprehensions, simplify, security, annotations), mypy and bandit config sections added; `pre-commit`, `mypy`, `bandit[toml]`, `semgrep` added to dev extras
-- `tasks.py` — `invoke install` now installs pre-commit hooks automatically; added `invoke hooks` and `invoke hooks-update`
 
 ## [0.6.0] — 2026-06-10
 
