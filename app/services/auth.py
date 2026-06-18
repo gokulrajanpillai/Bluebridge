@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 
 from app.services import az_cli
@@ -21,7 +21,7 @@ def _parse_expires_on(expires_on: str) -> datetime:
         "%Y-%m-%d %H:%M:%S",
     ):
         try:
-            return datetime.strptime(expires_on, fmt).replace(tzinfo=timezone.utc)
+            return datetime.strptime(expires_on, fmt).replace(tzinfo=UTC)
         except ValueError:
             continue
     return datetime.fromisoformat(expires_on.replace("Z", "+00:00"))
@@ -33,7 +33,7 @@ def _is_expired(entry: dict[str, Any]) -> bool:
         return True
     try:
         exp = _parse_expires_on(str(expires_on))
-        remaining = (exp - datetime.now(timezone.utc)).total_seconds()
+        remaining = (exp - datetime.now(UTC)).total_seconds()
         return remaining < _REFRESH_BUFFER_SECONDS
     except Exception:
         return True
