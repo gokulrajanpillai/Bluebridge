@@ -7,6 +7,13 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [0.7.2] — 2026-06-19
+
+### Changed
+- PyInstaller build switched from `--onedir` to `--onefile` — Windows/Linux releases are now a single portable executable with no `_internal` folder required alongside it
+- `build.py` no longer requires Python 3.11+ (`tomllib` replaced with a stdlib regex parse of `pyproject.toml`)
+- `requires-python` relaxed to `>=3.10` to match runtime compatibility
+
 ## [0.7.1] — 2026-06-18
 
 ### Fixed

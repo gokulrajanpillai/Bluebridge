@@ -12,14 +12,17 @@ Output:
 from __future__ import annotations
 
 import os
+import re
 import subprocess
 import sys
-import tomllib
 from pathlib import Path
 
 
 def _version() -> str:
-    return tomllib.loads(Path("pyproject.toml").read_text())["project"]["version"]
+    m = re.search(r'^version\s*=\s*"([^"]+)"', Path("pyproject.toml").read_text(), re.MULTILINE)
+    if not m:
+        raise RuntimeError("version not found in pyproject.toml")
+    return m.group(1)
 
 
 def _run(*args: str) -> None:
@@ -45,20 +48,26 @@ def main() -> None:
     cmd = [
         *pyinstaller,
         "launcher.py",
-        "--name", "BlueBridge",
-        "--onedir",
-        "--collect-all", "streamlit",
-        "--add-data", f"app.py{sep}.",
-        "--add-data", f"app{sep}app",
+        "--name",
+        "BlueBridge",
+        "--onefile",
+        "--collect-all",
+        "streamlit",
+        "--add-data",
+        f"app.py{sep}.",
+        "--add-data",
+        f"app{sep}app",
         "--noconfirm",
         "--clean",
-        "--distpath", str(out_dir),
+        "--distpath",
+        str(out_dir),
     ]
 
     if platform == "macos":
         cmd += [
             "--windowed",
-            "--osx-bundle-identifier", "com.bluebridge.app",
+            "--osx-bundle-identifier",
+            "com.bluebridge.app",
         ]
     elif platform == "windows":
         cmd += ["--windowed"]
