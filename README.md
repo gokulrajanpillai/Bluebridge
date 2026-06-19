@@ -35,7 +35,7 @@ BlueBridge is a cross-platform desktop application (Windows / macOS / Linux) bui
 
 ## Prerequisites
 
-- Python 3.11+
+- Python 3.10+
 - [Azure CLI](https://aka.ms/install-azure-cli) (`az` on your PATH, signed in via `az login`)
 
 ---
@@ -79,7 +79,7 @@ python build.py macos
 python build.py linux
 ```
 
-Output is placed in `dist/`.
+Output is a single portable executable at `build/<platform>/BlueBridge[.exe]` — no supporting folder needed.
 
 ---
 

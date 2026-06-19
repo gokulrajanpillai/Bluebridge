@@ -31,7 +31,7 @@ jobs:
 
       - name: Zip artefact
         shell: pwsh
-        run: Compress-Archive -Path build\windows\* -DestinationPath bluebridge-windows.zip
+        run: Compress-Archive -Path build\windows\BlueBridge.exe -DestinationPath bluebridge-windows.zip
 
       - name: Upload artefact
         uses: actions/upload-artifact@v4
