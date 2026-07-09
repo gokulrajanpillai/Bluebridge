@@ -3,16 +3,28 @@
 // visible URL, and attach it to every /api/v1 call. See REBUILD_PLAN.md §A2.
 
 let launchToken = '';
+let startupTenantHint = '';
 
 export function initLaunchToken(): void {
   const params = new URLSearchParams(window.location.hash.slice(1));
   const token = params.get('token');
   if (token) {
     launchToken = token;
+    startupTenantHint = params.get('tenant') ?? '';
     const url = new URL(window.location.href);
     url.hash = '';
     window.history.replaceState(null, '', url.toString());
   }
+}
+
+/** Tenant ID passed via `--tenant` on the CLI, if any. Read once at startup. */
+export function getStartupTenantHint(): string {
+  return startupTenantHint;
+}
+
+/** URL for EventSource, which cannot set headers so the token travels as a query param. */
+export function eventsUrl(): string {
+  return `/api/v1/events?token=${encodeURIComponent(launchToken)}`;
 }
 
 export class ApiError extends Error {

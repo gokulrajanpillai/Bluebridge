@@ -17,13 +17,22 @@ func NewLaunchToken() (string, error) {
 	return hex.EncodeToString(b), nil
 }
 
-// RequireLaunchToken wraps next, rejecting any request whose bearer token
-// does not match token in constant time.
+// RequireLaunchToken wraps next, rejecting any request that doesn't present
+// token, either as an "Authorization: Bearer <token>" header (used by the
+// fetch-based API client) or a "?token=" query parameter (the only option
+// for the browser EventSource API, which cannot set headers — used solely
+// by the /events SSE endpoint).
 func RequireLaunchToken(token string, next http.Handler) http.Handler {
-	want := []byte("Bearer " + token)
+	wantHeader := []byte("Bearer " + token)
+	wantQuery := []byte(token)
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		got := []byte(r.Header.Get("Authorization"))
-		if len(got) != len(want) || subtle.ConstantTimeCompare(got, want) != 1 {
+		header := []byte(r.Header.Get("Authorization"))
+		query := []byte(r.URL.Query().Get("token"))
+
+		headerOK := len(header) == len(wantHeader) && subtle.ConstantTimeCompare(header, wantHeader) == 1
+		queryOK := len(query) > 0 && len(query) == len(wantQuery) && subtle.ConstantTimeCompare(query, wantQuery) == 1
+
+		if !headerOK && !queryOK {
 			http.Error(w, `{"error":{"code":"unauthorized","message":"missing or invalid local session token"}}`, http.StatusUnauthorized)
 			return
 		}

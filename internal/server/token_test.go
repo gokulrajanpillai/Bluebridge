@@ -25,17 +25,24 @@ func TestRequireLaunchToken(t *testing.T) {
 	cases := []struct {
 		name       string
 		authHeader string
+		queryToken string
 		wantStatus int
 	}{
-		{"missing header", "", http.StatusUnauthorized},
-		{"wrong token", "Bearer deadbeef", http.StatusUnauthorized},
-		{"correct token", "Bearer " + token, http.StatusOK},
+		{"missing everything", "", "", http.StatusUnauthorized},
+		{"wrong header token", "Bearer deadbeef", "", http.StatusUnauthorized},
+		{"correct header token", "Bearer " + token, "", http.StatusOK},
+		{"wrong query token", "", "deadbeef", http.StatusUnauthorized},
+		{"correct query token", "", token, http.StatusOK},
 	}
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			handlerCalled = false
-			req := httptest.NewRequest(http.MethodGet, "/api/v1/tenants", nil)
+			path := "/api/v1/events"
+			if tc.queryToken != "" {
+				path += "?token=" + tc.queryToken
+			}
+			req := httptest.NewRequest(http.MethodGet, path, nil)
 			if tc.authHeader != "" {
 				req.Header.Set("Authorization", tc.authHeader)
 			}
