@@ -99,6 +99,13 @@ localhost, opening the user's default browser.**
   - Enable MSAL **persistent token cache** (`azidentity/cache`) so sign-in survives restarts.
     Tokens are cached encrypted via OS facilities (DPAPI / Keychain / kernel keyring). Never write
     raw tokens to disk yourself.
+  - **Known constraint:** the Keychain accessor backing `azidentity/cache` on macOS
+    (`microsoft-authentication-extensions-for-go/cache`) is built with `//go:build darwin && cgo`
+    — it requires cgo. Linux (kernel keyring) and Windows (DPAPI) accessors do not. This means
+    darwin binaries cannot be cross-compiled `CGO_ENABLED=0` from Linux like the other four
+    targets; they must build natively on a macOS runner with `CGO_ENABLED=1` (see `make
+    dist-darwin` and the `build-darwin` job in `release.yml`). Confirmed by building all six
+    targets locally.
   - Tokens are always requested **per tenant** (authority `https://login.microsoftonline.com/{tenantId}`)
     and per audience (ARM `https://management.azure.com/.default`, Storage
     `https://storage.azure.com/.default`, ACR via its OAuth2 exchange).
