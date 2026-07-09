@@ -7,6 +7,24 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Changed
+- **Full rewrite** from Python/Streamlit/PyInstaller to a single static Go binary embedding a
+  React + TypeScript SPA (Fluent UI v9), per [REBUILD_PLAN.md](REBUILD_PLAN.md). Motivated by
+  persistent packaging failures (huge/fragile PyInstaller binaries, Azure CLI as a hard
+  prerequisite, Streamlit's full-rerun model causing state bugs and heavy polling).
+- Auth no longer shells out to `az`; native MSAL sign-in (`azidentity`) with browser and
+  device-code flows, encrypted persistent token cache.
+- CI/release pipelines rewritten for Go + Node; releases now cross-compile
+  windows/darwin/linux × amd64/arm64 from a single Ubuntu runner.
+
+### Added
+- New estate browser: tenants → subscriptions → resource groups → resources, backed by Azure
+  Resource Graph, with search/filter/sort and Portal deep-links (replaces the old flat Resources
+  tab).
+
+### Removed
+- Legacy Streamlit app (`app.py`, `app/`, `launcher.py`, `build.py`, PyInstaller packaging).
+
 ## [0.7.3] — 2026-06-19
 
 ### Fixed

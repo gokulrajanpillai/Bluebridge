@@ -1,96 +1,62 @@
 # BlueBridge
 
-**Azure PIM Access Manager** — activate roles, browse resources, and inspect activity from a single browser tab.
+**Azure companion tool** — browse your tenants, subscriptions, resource groups, and resources,
+and manage PIM role activations, from a single local app.
 
-BlueBridge is a cross-platform desktop application (Windows / macOS / Linux) built with [Streamlit](https://streamlit.io) and packaged as a standalone executable via PyInstaller. It authenticates through the [Azure CLI](https://aka.ms/install-azure-cli) and talks directly to ARM REST APIs, giving you faster access to the things you do most in the Azure Portal.
+BlueBridge is a single static binary (Go) that embeds a React SPA and serves it on `localhost`,
+opening your default browser. There is nothing else to install — no Python, no Azure CLI, no
+.NET runtime.
 
----
-
-## Features
-
-### Access (PIM)
-- View all **Eligible**, **Active**, and **Pending** role assignments across every subscription in your tenant
-- **Bulk-activate** multiple eligible roles at once — shared justification, configurable duration (1–8 h), parallel submission via `ThreadPoolExecutor`
-- Live per-role activation status (`Provisioning → Active / Denied / Failed`) via `st.status`
-- Active tab auto-refreshes every 60 s; Pending tab every 30 s
-
-### Resources
-- Full resource inventory across all subscriptions — name, type, resource group, location, Azure Portal deep-link
-- Searchable and filterable by resource group, type, and location
-- **Inline resource detail panel** — click any resource to expand:
-  - **Activity Log** — 24 h history, auto-refreshes every 30 s, plain-text export
-  - **Storage** (Storage Accounts) — browse containers and virtual directories, preview blob metadata, one-click download
-  - **Registry** (Container Registry) — list repos and tags, copy `docker pull` command
-  - **Container Logs** (Container Instances) — fetch stdout/stderr with configurable tail, plain-text export
-  - **Deployments** (App Service) — deployment history with status icons
-  - Permission-denied errors surface actionable role hints instead of raw HTTP 403s
-
-### General
-- Authenticates via `az login` — browser SSO, no credentials stored by BlueBridge
-- Tenant switcher — change tenants without restarting
-- Per-tenant token cache with automatic refresh 5 min before expiry
-- Packaged as a single executable: `launcher.py` starts the Streamlit server and opens your browser automatically
-
----
-
-## Prerequisites
-
-- Python 3.10+
-- [Azure CLI](https://aka.ms/install-azure-cli) (`az` on your PATH, signed in via `az login`)
+> **Status:** under active rewrite. See [REBUILD_PLAN.md](REBUILD_PLAN.md) for the full
+> specification and milestone plan. The previous Streamlit/PyInstaller implementation has been
+> removed; see [CHANGELOG.md](CHANGELOG.md) for history.
 
 ---
 
 ## Quick start
 
-```bash
-# 1. Clone
-git clone <repo-url>
-cd bluebridge
-
-# 2. Create and activate a virtual environment
-python -m venv .venv
-# Windows
-.venv\Scripts\activate
-# macOS / Linux
-source .venv/bin/activate
-
-# 3. Install
-pip install -e .
-
-# 4. Run
-streamlit run app.py
-# or via the launcher (auto-opens browser):
-python launcher.py
-```
-
----
-
-## Building a standalone executable
+Download the binary for your OS/arch from [Releases](../../releases) and run it:
 
 ```bash
-pip install -e ".[build]"
-
-# Current platform
-python build.py
-
-# Specific target
-python build.py windows
-python build.py macos
-python build.py linux
+./bluebridge
 ```
 
-Output is a single portable executable at `build/<platform>/BlueBridge[.exe]` — no supporting folder needed.
+Your browser opens automatically to the sign-in screen. Sign in with your Microsoft account —
+BlueBridge never stores your password; tokens are cached encrypted via OS-native facilities.
+
+### CLI flags
+
+| Flag | Description |
+|---|---|
+| `--port <n>` | Port to listen on (default: pick a free port) |
+| `--no-browser` | Don't open the system browser automatically |
+| `--tenant <id>` | Sign in to a specific tenant on start |
+| `--verbose` | Mirror logs to stderr in addition to the log file |
+| `--version` | Print version and exit |
 
 ---
 
 ## Development
 
-```bash
-pip install -e ".[dev]"
+Requires Go 1.22+ and Node 20+.
 
-ruff check .          # lint
-ruff format .         # format
-mypy app.py           # type check
+```bash
+make build   # builds web/ then the Go binary → ./bluebridge
+make run     # build and run
+make test    # go test ./... + web build
+make lint    # go vet + web lint
+make dist    # cross-compile all release targets into dist/
+```
+
+Project layout:
+
+```
+cmd/bluebridge/     # CLI entrypoint
+internal/
+  server/           # localhost HTTP server, launch-token auth, SPA serving
+  cache/            # generic TTL / stale-while-revalidate cache
+  logging/          # rotating file logger
+web/                # React + TypeScript SPA (Vite), embedded via web/webui.go
 ```
 
 ---
