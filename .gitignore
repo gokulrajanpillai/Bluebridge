@@ -1,39 +1,22 @@
 # Always track the GitHub Actions directory regardless of global gitignore rules
 !.github/
 
-# Python
-__pycache__/
-*.py[cod]
-*.pyo
-*.pyd
-.Python
-*.egg
-*.egg-info/
-dist/
-build/
-eggs/
-parts/
-var/
-sdist/
-develop-eggs/
-.installed.cfg
-lib/
-lib64/
-.venv/
-venv/
-ENV/
-env/
+# Go
+/bluebridge
+/dist/
 
-# PyInstaller
-*.spec
-*.pkg
+# Node (root-level tooling only; web/ has its own .gitignore)
+node_modules/
 
 # Release artefacts
 bluebridge-*.zip
+bluebridge-*.tar.gz
+SHA256SUMS
 
 # Settings / secrets
 settings.json
 *.local.json
+.env
 
 # IDE
 .vscode/
@@ -46,12 +29,3 @@ Thumbs.db
 # Logs
 *.log
 logs/
-
-# Test / coverage
-.pytest_cache/
-.coverage
-htmlcov/
-
-# Distribution
-*.whl
-*.tar.gz
