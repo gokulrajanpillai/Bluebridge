@@ -16,6 +16,8 @@ type Server struct {
 	mux     *http.ServeMux
 	version string
 	log     *slog.Logger
+	auth    AuthBroker
+	events  *Hub
 }
 
 // Options configures a new Server.
@@ -24,16 +26,24 @@ type Options struct {
 	Version string
 	Token   string // launch token; API routes require it, static assets don't
 	Log     *slog.Logger
+	Auth    AuthBroker
+	Events  *Hub // SSE hub; if nil, /api/v1/events is not registered
 }
 
 // New builds the top-level handler: static SPA at "/", API at "/api/v1/*".
 func New(opts Options) *Server {
-	s := &Server{mux: http.NewServeMux(), version: opts.Version, log: opts.Log}
+	s := &Server{mux: http.NewServeMux(), version: opts.Version, log: opts.Log, auth: opts.Auth, events: opts.Events}
 
 	api := http.NewServeMux()
 	api.HandleFunc("GET /api/v1/version", s.handleVersion)
-	// Additional /api/v1/* routes (auth, tenants, resources, pim, events, ...)
-	// are registered here as each milestone lands.
+	api.HandleFunc("GET /api/v1/auth/status", s.handleAuthStatus)
+	api.HandleFunc("POST /api/v1/auth/login", s.handleAuthLogin)
+	api.HandleFunc("POST /api/v1/auth/logout", s.handleAuthLogout)
+	if opts.Events != nil {
+		api.HandleFunc("GET /api/v1/events", opts.Events.ServeHTTP)
+	}
+	// Additional /api/v1/* routes (tenants, resources, pim, ...) are
+	// registered here as each milestone lands.
 
 	s.mux.Handle("/api/v1/", RequireLaunchToken(opts.Token, api))
 	s.mux.Handle("/", spaHandler(opts.WebFS))

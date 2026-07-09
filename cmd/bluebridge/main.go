@@ -18,6 +18,8 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/Azure/azure-sdk-for-go/sdk/azidentity"
+	"github.com/gokulrajanpillai/bluebridge/internal/auth"
 	"github.com/gokulrajanpillai/bluebridge/internal/logging"
 	"github.com/gokulrajanpillai/bluebridge/internal/server"
 	webui "github.com/gokulrajanpillai/bluebridge/web"
@@ -49,8 +51,6 @@ func run(args []string) int {
 	log, closeLog := setupLogger(*verbose)
 	defer closeLog()
 
-	_ = tenant // consumed once /auth/login is wired up (M2)
-
 	ln, err := net.Listen("tcp", fmt.Sprintf("127.0.0.1:%d", *port))
 	if err != nil {
 		log.Error("failed to bind local port", "error", err)
@@ -64,17 +64,35 @@ func run(args []string) int {
 		return 1
 	}
 
+	var persistentCache azidentity.Cache
+	if c, err := auth.NewPersistentCache(); err != nil {
+		log.Warn("persistent token cache unavailable; sign-in will not survive restart", "error", err)
+	} else {
+		persistentCache = c
+	}
+	broker := auth.New(persistentCache)
+
+	events := server.NewHub()
+	broker.OnDeviceCode(func(p auth.DeviceCodePrompt) {
+		events.Broadcast(server.Event{Name: "auth.devicecode", Data: p})
+	})
+
 	srv := server.New(server.Options{
 		WebFS:   webui.FS(),
 		Version: version,
 		Token:   token,
 		Log:     log,
+		Auth:    broker,
+		Events:  events,
 	})
 
 	httpServer := &http.Server{Handler: srv.Handler()}
 
 	addr := ln.Addr().(*net.TCPAddr)
 	url := fmt.Sprintf("http://127.0.0.1:%d/#token=%s", addr.Port, token)
+	if *tenant != "" {
+		url += "&tenant=" + *tenant
+	}
 
 	errCh := make(chan error, 1)
 	go func() {

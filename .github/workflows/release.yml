@@ -33,6 +33,8 @@ jobs:
           name: web-dist
           path: web/dist
 
+  # Windows and Linux binaries are cgo-free and cross-compile from one
+  # Ubuntu runner.
   build:
     name: Build / ${{ matrix.goos }}-${{ matrix.goarch }}
     needs: build-web
@@ -46,12 +48,6 @@ jobs:
           - goos: windows
             goarch: arm64
             ext: .exe
-          - goos: darwin
-            goarch: amd64
-            ext: ""
-          - goos: darwin
-            goarch: arm64
-            ext: ""
           - goos: linux
             goarch: amd64
             ext: ""
@@ -105,9 +101,59 @@ jobs:
           path: ${{ env.ARTIFACT }}
           if-no-files-found: error
 
+  # macOS Keychain persistence (internal/auth/persistent_cache.go) needs
+  # cgo, which requires the native Apple SDK — so darwin binaries build
+  # natively per-arch on macos-latest rather than cross-compiling.
+  build-darwin:
+    name: Build / darwin-${{ matrix.goarch }}
+    needs: build-web
+    runs-on: macos-latest
+    strategy:
+      matrix:
+        goarch: [amd64, arm64]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.22"
+          cache: true
+
+      - name: Download web build
+        uses: actions/download-artifact@v4
+        with:
+          name: web-dist
+          path: web/dist
+
+      - name: Extract version from tag
+        id: version
+        run: echo "VERSION=${GITHUB_REF_NAME}" >> "$GITHUB_OUTPUT"
+
+      - name: Build
+        env:
+          GOARCH: ${{ matrix.goarch }}
+          CGO_ENABLED: "1"
+        run: |
+          go build -ldflags "-s -w -X main.version=${{ steps.version.outputs.VERSION }}" \
+            -o "bluebridge-darwin-${{ matrix.goarch }}" \
+            ./cmd/bluebridge
+
+      - name: Package
+        run: |
+          NAME="bluebridge-${{ steps.version.outputs.VERSION }}-darwin-${{ matrix.goarch }}"
+          tar -czf "${NAME}.tar.gz" "bluebridge-darwin-${{ matrix.goarch }}"
+          echo "ARTIFACT=${NAME}.tar.gz" >> "$GITHUB_ENV"
+
+      - name: Upload artefact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ env.ARTIFACT }}
+          path: ${{ env.ARTIFACT }}
+          if-no-files-found: error
+
   release:
     name: Publish Release
-    needs: [build]
+    needs: [build, build-darwin]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
