@@ -9,98 +9,105 @@ permissions:
   contents: write
 
 jobs:
-  # ── Build jobs (run in parallel) ────────────────────────────────────────────
-
-  build-windows:
-    name: Build / Windows
-    runs-on: windows-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-
-      - name: Install dependencies
-        run: pip install -e ".[build]"
-
-      - name: Build
-        env:
-          PYTHONUTF8: "1"
-        run: python build.py windows
-
-      - name: Zip artefact
-        shell: pwsh
-        run: Compress-Archive -Path build\windows\BlueBridge.exe -DestinationPath bluebridge-windows.zip
-
-      - name: Upload artefact
-        uses: actions/upload-artifact@v4
-        with:
-          name: bluebridge-windows
-          path: bluebridge-windows.zip
-          if-no-files-found: error
-
-  build-macos:
-    name: Build / macOS
-    runs-on: macos-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-
-      - name: Install dependencies
-        run: pip install -e ".[build]"
-
-      - name: Build
-        run: python build.py macos
-
-      - name: Zip app bundle
-        run: |
-          # ditto preserves symlinks; zip -r would follow recursive symlinks
-          # inside the bundle and inflate the archive to unusable sizes.
-          ditto -c -k --sequesterRsrc --keepParent \
-            build/macos/BlueBridge.app bluebridge-macos.zip
-
-      - name: Upload artefact
-        uses: actions/upload-artifact@v4
-        with:
-          name: bluebridge-macos
-          path: bluebridge-macos.zip
-          if-no-files-found: error
-
-  build-linux:
-    name: Build / Linux
+  build-web:
+    name: Build web assets
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
 
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-node@v4
         with:
-          python-version: "3.12"
-
-      - name: Install dependencies
-        run: pip install -e ".[build]"
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: web/package-lock.json
 
       - name: Build
-        run: python build.py linux
+        working-directory: web
+        run: |
+          npm ci
+          npm run build
 
-      - name: Tar artefact
-        run: tar -czf bluebridge-linux.tar.gz -C build/linux .
+      - name: Upload web build
+        uses: actions/upload-artifact@v4
+        with:
+          name: web-dist
+          path: web/dist
+
+  build:
+    name: Build / ${{ matrix.goos }}-${{ matrix.goarch }}
+    needs: build-web
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - goos: windows
+            goarch: amd64
+            ext: .exe
+          - goos: windows
+            goarch: arm64
+            ext: .exe
+          - goos: darwin
+            goarch: amd64
+            ext: ""
+          - goos: darwin
+            goarch: arm64
+            ext: ""
+          - goos: linux
+            goarch: amd64
+            ext: ""
+          - goos: linux
+            goarch: arm64
+            ext: ""
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.22"
+          cache: true
+
+      - name: Download web build
+        uses: actions/download-artifact@v4
+        with:
+          name: web-dist
+          path: web/dist
+
+      - name: Extract version from tag
+        id: version
+        run: echo "VERSION=${GITHUB_REF_NAME}" >> "$GITHUB_OUTPUT"
+
+      - name: Build
+        env:
+          GOOS: ${{ matrix.goos }}
+          GOARCH: ${{ matrix.goarch }}
+          CGO_ENABLED: "0"
+        run: |
+          go build -ldflags "-s -w -X main.version=${{ steps.version.outputs.VERSION }}" \
+            -o "bluebridge-${{ matrix.goos }}-${{ matrix.goarch }}${{ matrix.ext }}" \
+            ./cmd/bluebridge
+
+      - name: Package
+        run: |
+          NAME="bluebridge-${{ steps.version.outputs.VERSION }}-${{ matrix.goos }}-${{ matrix.goarch }}"
+          BIN="bluebridge-${{ matrix.goos }}-${{ matrix.goarch }}${{ matrix.ext }}"
+          if [ "${{ matrix.goos }}" = "windows" ]; then
+            zip "${NAME}.zip" "$BIN"
+            echo "ARTIFACT=${NAME}.zip" >> "$GITHUB_ENV"
+          else
+            tar -czf "${NAME}.tar.gz" "$BIN"
+            echo "ARTIFACT=${NAME}.tar.gz" >> "$GITHUB_ENV"
+          fi
 
       - name: Upload artefact
         uses: actions/upload-artifact@v4
         with:
-          name: bluebridge-linux
-          path: bluebridge-linux.tar.gz
+          name: ${{ env.ARTIFACT }}
+          path: ${{ env.ARTIFACT }}
           if-no-files-found: error
-
-  # ── Release job ─────────────────────────────────────────────────────────────
 
   release:
     name: Publish Release
-    needs: [build-windows, build-macos, build-linux]
+    needs: [build]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -109,6 +116,12 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           path: dist/
+          pattern: bluebridge-*
+          merge-multiple: true
+
+      - name: Generate checksums
+        working-directory: dist
+        run: sha256sum * > SHA256SUMS
 
       - name: Extract version from tag
         id: version
@@ -131,6 +144,4 @@ jobs:
           draft: false
           prerelease: ${{ contains(github.ref_name, '-') }}
           files: |
-            dist/bluebridge-windows/bluebridge-windows.zip
-            dist/bluebridge-macos/bluebridge-macos.zip
-            dist/bluebridge-linux/bluebridge-linux.tar.gz
+            dist/*
