@@ -12,6 +12,12 @@ node_modules/
 bluebridge-*.zip
 bluebridge-*.tar.gz
 SHA256SUMS
+*.exe
+/BlueBridge/
+/bluebridge-windows/
+/bluebridge-windows-new/
+/bluebridge-macos/
+/bluebridge-linux/
 
 # Settings / secrets
 settings.json
@@ -29,3 +35,16 @@ Thumbs.db
 # Logs
 *.log
 logs/
+
+# Test / coverage
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Tool caches
+.mypy_cache/
+.ruff_cache/
+
+# Distribution
+*.whl
+*.tar.gz
