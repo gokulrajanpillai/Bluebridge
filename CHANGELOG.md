@@ -18,9 +18,22 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   windows/darwin/linux × amd64/arm64 from a single Ubuntu runner.
 
 ### Added
+- **BlueBridgeCLI** (`bluebridge-cli`) — an interactive terminal client: sign in, pick a tenant,
+  pick a subscription scope, multi-select eligible PIM roles, and activate them with a shared
+  justification and duration. Also exposes non-interactive `tenants`, `resources`, and
+  `pim list`/`pim activate` subcommands for scripting.
+- Shared `internal/azure` service core (ARM client with pagination, 429/5xx retry, and typed
+  role-hint errors; tenants, subscriptions, resources, and PIM eligibility/activation), consumed
+  by both the CLI and the web server.
+- Public `/healthz` endpoint on the local server for liveness probes and smoke tests.
 - New estate browser: tenants → subscriptions → resource groups → resources, backed by Azure
   Resource Graph, with search/filter/sort and Portal deep-links (replaces the old flat Resources
   tab).
+
+### Fixed
+- Bumped `golang.org/x/crypto` to v0.54.0, resolving 13 transitive advisories.
+- CI/release now read the Go version from `go.mod` (was pinned to 1.22, drifting from the
+  declared toolchain).
 
 ### Removed
 - Legacy Streamlit app (`app.py`, `app/`, `launcher.py`, `build.py`, PyInstaller packaging).

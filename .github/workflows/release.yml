@@ -72,33 +72,35 @@ jobs:
         id: version
         run: echo "VERSION=${GITHUB_REF_NAME}" >> "$GITHUB_OUTPUT"
 
-      - name: Build
+      - name: Build binaries (server + CLI)
         env:
           GOOS: ${{ matrix.goos }}
           GOARCH: ${{ matrix.goarch }}
           CGO_ENABLED: "0"
         run: |
-          go build -ldflags "-s -w -X main.version=${{ steps.version.outputs.VERSION }}" \
-            -o "bluebridge-${{ matrix.goos }}-${{ matrix.goarch }}${{ matrix.ext }}" \
-            ./cmd/bluebridge
+          LDFLAGS="-s -w -X main.version=${{ steps.version.outputs.VERSION }}"
+          go build -ldflags "$LDFLAGS" -o "bluebridge-${GOOS}-${GOARCH}${{ matrix.ext }}" ./cmd/bluebridge
+          go build -ldflags "$LDFLAGS" -o "bluebridge-cli-${GOOS}-${GOARCH}${{ matrix.ext }}" ./cmd/bluebridge-cli
 
       - name: Package
         run: |
-          NAME="bluebridge-${{ steps.version.outputs.VERSION }}-${{ matrix.goos }}-${{ matrix.goarch }}"
-          BIN="bluebridge-${{ matrix.goos }}-${{ matrix.goarch }}${{ matrix.ext }}"
-          if [ "${{ matrix.goos }}" = "windows" ]; then
-            zip "${NAME}.zip" "$BIN"
-            echo "ARTIFACT=${NAME}.zip" >> "$GITHUB_ENV"
-          else
-            tar -czf "${NAME}.tar.gz" "$BIN"
-            echo "ARTIFACT=${NAME}.tar.gz" >> "$GITHUB_ENV"
-          fi
+          mkdir -p out
+          VERSION="${{ steps.version.outputs.VERSION }}"
+          for app in bluebridge bluebridge-cli; do
+            BIN="${app}-${{ matrix.goos }}-${{ matrix.goarch }}${{ matrix.ext }}"
+            NAME="${app}-${VERSION}-${{ matrix.goos }}-${{ matrix.goarch }}"
+            if [ "${{ matrix.goos }}" = "windows" ]; then
+              zip "out/${NAME}.zip" "$BIN"
+            else
+              tar -czf "out/${NAME}.tar.gz" "$BIN"
+            fi
+          done
 
-      - name: Upload artefact
+      - name: Upload artefacts
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ env.ARTIFACT }}
-          path: ${{ env.ARTIFACT }}
+          name: dist-${{ matrix.goos }}-${{ matrix.goarch }}
+          path: out/*
           if-no-files-found: error
 
   # macOS Keychain persistence (internal/auth/persistent_cache.go) needs
@@ -129,26 +131,29 @@ jobs:
         id: version
         run: echo "VERSION=${GITHUB_REF_NAME}" >> "$GITHUB_OUTPUT"
 
-      - name: Build
+      - name: Build binaries (server + CLI)
         env:
           GOARCH: ${{ matrix.goarch }}
           CGO_ENABLED: "1"
         run: |
-          go build -ldflags "-s -w -X main.version=${{ steps.version.outputs.VERSION }}" \
-            -o "bluebridge-darwin-${{ matrix.goarch }}" \
-            ./cmd/bluebridge
+          LDFLAGS="-s -w -X main.version=${{ steps.version.outputs.VERSION }}"
+          go build -ldflags "$LDFLAGS" -o "bluebridge-darwin-${GOARCH}" ./cmd/bluebridge
+          go build -ldflags "$LDFLAGS" -o "bluebridge-cli-darwin-${GOARCH}" ./cmd/bluebridge-cli
 
       - name: Package
         run: |
-          NAME="bluebridge-${{ steps.version.outputs.VERSION }}-darwin-${{ matrix.goarch }}"
-          tar -czf "${NAME}.tar.gz" "bluebridge-darwin-${{ matrix.goarch }}"
-          echo "ARTIFACT=${NAME}.tar.gz" >> "$GITHUB_ENV"
+          mkdir -p out
+          VERSION="${{ steps.version.outputs.VERSION }}"
+          for app in bluebridge bluebridge-cli; do
+            NAME="${app}-${VERSION}-darwin-${{ matrix.goarch }}"
+            tar -czf "out/${NAME}.tar.gz" "${app}-darwin-${{ matrix.goarch }}"
+          done
 
-      - name: Upload artefact
+      - name: Upload artefacts
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ env.ARTIFACT }}
-          path: ${{ env.ARTIFACT }}
+          name: dist-darwin-${{ matrix.goarch }}
+          path: out/*
           if-no-files-found: error
 
   release:
@@ -162,7 +167,7 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           path: dist/
-          pattern: bluebridge-*
+          pattern: dist-*
           merge-multiple: true
 
       - name: Generate checksums
