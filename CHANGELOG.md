@@ -7,6 +7,27 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Added
+- Web estate browser: tenants → subscriptions → resource groups → resources, backed by Azure
+  Resource Graph, with search/filter/sort and Portal deep-links (in progress; the CLI already
+  ships tenant/subscription browsing and PIM activation).
+
+## [0.8.0] — 2026-07-18
+
+First working build of the v2 Go rewrite: an end-to-end interactive CLI for PIM activation, on a
+shared, tested Azure service core.
+
+### Added
+- **BlueBridgeCLI** (`bluebridge-cli`) — an interactive terminal client: sign in, pick a tenant,
+  pick a subscription scope, multi-select eligible PIM roles, and activate them with a shared
+  justification and duration. Also exposes non-interactive `tenants`, `resources`, and
+  `pim list`/`pim activate` subcommands for scripting. Covered by a headless `teatest` E2E of the
+  full flow.
+- Shared `internal/azure` service core (ARM client with pagination, 429/5xx retry, and typed
+  role-hint errors; tenants, subscriptions, resources, and PIM eligibility/activation), consumed
+  by both the CLI and the web server (79% test coverage).
+- Public `/healthz` endpoint on the local server for liveness probes and CI smoke tests.
+
 ### Changed
 - **Full rewrite** from Python/Streamlit/PyInstaller to a single static Go binary embedding a
   React + TypeScript SPA (Fluent UI v9), per [REBUILD_PLAN.md](REBUILD_PLAN.md). Motivated by
@@ -15,20 +36,7 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Auth no longer shells out to `az`; native MSAL sign-in (`azidentity`) with browser and
   device-code flows, encrypted persistent token cache.
 - CI/release pipelines rewritten for Go + Node; releases now cross-compile
-  windows/darwin/linux × amd64/arm64 from a single Ubuntu runner.
-
-### Added
-- **BlueBridgeCLI** (`bluebridge-cli`) — an interactive terminal client: sign in, pick a tenant,
-  pick a subscription scope, multi-select eligible PIM roles, and activate them with a shared
-  justification and duration. Also exposes non-interactive `tenants`, `resources`, and
-  `pim list`/`pim activate` subcommands for scripting.
-- Shared `internal/azure` service core (ARM client with pagination, 429/5xx retry, and typed
-  role-hint errors; tenants, subscriptions, resources, and PIM eligibility/activation), consumed
-  by both the CLI and the web server.
-- Public `/healthz` endpoint on the local server for liveness probes and smoke tests.
-- New estate browser: tenants → subscriptions → resource groups → resources, backed by Azure
-  Resource Graph, with search/filter/sort and Portal deep-links (replaces the old flat Resources
-  tab).
+  windows/darwin/linux × amd64/arm64 (server + CLI) from CI, with SHA256SUMS.
 
 ### Fixed
 - Bumped `golang.org/x/crypto` to v0.54.0, resolving 13 transitive advisories.
