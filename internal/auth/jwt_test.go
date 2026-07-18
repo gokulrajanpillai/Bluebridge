@@ -20,8 +20,8 @@ func fakeJWT(t *testing.T, claims map[string]any) string {
 func TestParseIDTokenClaimsPreferredUsername(t *testing.T) {
 	token := fakeJWT(t, map[string]any{
 		"preferred_username": "user@contoso.com",
-		"name":                "Test User",
-		"tid":                 "tid-123",
+		"name":               "Test User",
+		"tid":                "tid-123",
 	})
 	claims, err := parseIDTokenClaims(token)
 	if err != nil {
