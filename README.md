@@ -15,7 +15,12 @@ opening your default browser. There is nothing else to install — no Python, no
 
 ## Quick start
 
-Download the binary for your OS/arch from [Releases](../../releases) and run it:
+> **Heads up:** the binaries currently on the [Releases](../../releases) page are the **legacy
+> v1 (Streamlit)** builds. The v2 Go rewrite has not been released yet — until the first v2 tag,
+> run it from source (see [Development](#development) below). This notice will be removed when v2
+> ships.
+
+Once a v2 binary is available, download it for your OS/arch and run it:
 
 ```bash
 ./bluebridge
