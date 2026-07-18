@@ -28,7 +28,7 @@ jobs:
           npm run build
 
       - name: Upload web build
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: web-dist
           path: web/dist
@@ -97,7 +97,7 @@ jobs:
           done
 
       - name: Upload artefacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: dist-${{ matrix.goos }}-${{ matrix.goarch }}
           path: out/*
@@ -150,7 +150,7 @@ jobs:
           done
 
       - name: Upload artefacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: dist-darwin-${{ matrix.goarch }}
           path: out/*
