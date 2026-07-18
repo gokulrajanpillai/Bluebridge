@@ -15,12 +15,9 @@ opening your default browser. There is nothing else to install — no Python, no
 
 ## Quick start
 
-> **Heads up:** the binaries currently on the [Releases](../../releases) page are the **legacy
-> v1 (Streamlit)** builds. The v2 Go rewrite has not been released yet — until the first v2 tag,
-> run it from source (see [Development](#development) below). This notice will be removed when v2
-> ships.
-
-Once a v2 binary is available, download it for your OS/arch and run it:
+Download the binary for your OS/arch from the [latest release](../../releases/latest) and run it.
+Each release ships two binaries: **`bluebridge`** (the local web app) and **`bluebridge-cli`**
+(the interactive terminal client — see [BlueBridgeCLI](#bluebridgecli)).
 
 ```bash
 ./bluebridge
@@ -28,6 +25,9 @@ Once a v2 binary is available, download it for your OS/arch and run it:
 
 Your browser opens automatically to the sign-in screen. Sign in with your Microsoft account —
 BlueBridge never stores your password; tokens are cached encrypted via OS-native facilities.
+
+> The binaries are not yet code-signed, so macOS Gatekeeper and Windows SmartScreen will warn on
+> first launch. Verify the download against `SHA256SUMS`; signing is tracked for a future release.
 
 ### CLI flags
 
