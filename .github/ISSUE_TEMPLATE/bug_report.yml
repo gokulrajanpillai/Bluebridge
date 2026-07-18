@@ -1,0 +1,47 @@
+name: Bug report
+description: Something isn't working as expected
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for the report! Please do **not** include tokens, real tenant/subscription IDs, or
+        other secrets. For security vulnerabilities, use private reporting instead (see SECURITY.md).
+  - type: dropdown
+    id: surface
+    attributes:
+      label: Which part?
+      options:
+        - bluebridge-cli (terminal client)
+        - bluebridge (web app)
+        - Build / release
+        - Other
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Version
+      description: Output of `bluebridge --version` / `bluebridge-cli --version`, or the commit SHA.
+    validations:
+      required: true
+  - type: input
+    id: os
+    attributes:
+      label: OS and architecture
+      placeholder: e.g. Windows 11 x64, macOS 15 arm64, Ubuntu 24.04 x64
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: What did you expect to happen?
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: What actually happened?
+      description: Include exact steps to reproduce and any error output (with secrets redacted).
+    validations:
+      required: true
