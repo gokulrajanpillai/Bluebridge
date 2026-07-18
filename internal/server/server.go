@@ -45,10 +45,17 @@ func New(opts Options) *Server {
 	// Additional /api/v1/* routes (tenants, resources, pim, ...) are
 	// registered here as each milestone lands.
 
+	// /healthz is intentionally public (no launch token) so process managers
+	// and smoke tests can probe liveness without the launch secret.
+	s.mux.HandleFunc("GET /healthz", s.handleHealth)
 	s.mux.Handle("/api/v1/", RequireLaunchToken(opts.Token, api))
 	s.mux.Handle("/", spaHandler(opts.WebFS))
 
 	return s
+}
+
+func (s *Server) handleHealth(w http.ResponseWriter, r *http.Request) {
+	writeJSON(w, http.StatusOK, map[string]string{"status": "ok", "version": s.version})
 }
 
 // Handler returns the composed http.Handler for use with http.Server.

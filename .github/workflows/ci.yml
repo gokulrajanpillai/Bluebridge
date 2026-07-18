@@ -71,3 +71,15 @@ jobs:
 
       - name: Version smoke test
         run: ./bluebridge --version
+
+      - name: Server smoke test (/healthz)
+        run: |
+          ./bluebridge --no-browser --port 8765 &
+          SERVER_PID=$!
+          ok=0
+          for _ in $(seq 1 20); do
+            if curl -fsS http://127.0.0.1:8765/healthz; then ok=1; break; fi
+            sleep 0.5
+          done
+          kill "$SERVER_PID" 2>/dev/null || true
+          if [ "$ok" != "1" ]; then echo "healthz never responded"; exit 1; fi

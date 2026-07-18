@@ -44,6 +44,19 @@ func TestVersionWithToken(t *testing.T) {
 	}
 }
 
+func TestHealthzIsPublicAndOK(t *testing.T) {
+	s, _ := testServer(t)
+	req := httptest.NewRequest(http.MethodGet, "/healthz", nil)
+	rec := httptest.NewRecorder()
+	s.Handler().ServeHTTP(rec, req)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("healthz should be public and return 200, got %d body=%q", rec.Code, rec.Body.String())
+	}
+	if ct := rec.Header().Get("Content-Type"); ct != "application/json" {
+		t.Fatalf("healthz content-type = %q, want application/json", ct)
+	}
+}
+
 func TestSPAServesIndexAtRoot(t *testing.T) {
 	s, _ := testServer(t)
 	req := httptest.NewRequest(http.MethodGet, "/", nil)
