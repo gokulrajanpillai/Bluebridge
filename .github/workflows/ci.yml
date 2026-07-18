@@ -24,6 +24,16 @@ jobs:
       - name: Test
         run: go test ./... -race
 
+      - name: Coverage gate (internal/azure + internal/server >= 70%)
+        run: |
+          go test ./internal/azure/... ./internal/server/... \
+            -covermode=atomic -coverprofile=core.out
+          pct=$(go tool cover -func=core.out | awk '/^total:/ {gsub(/%/,"",$3); print $3}')
+          echo "Core coverage: ${pct}%"
+          awk "BEGIN{ exit !(${pct} >= 70) }" || {
+            echo "::error::core coverage ${pct}% is below the 70% gate"; exit 1;
+          }
+
   web:
     name: Web
     runs-on: ubuntu-latest
